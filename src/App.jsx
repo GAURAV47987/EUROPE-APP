@@ -3,7 +3,7 @@ import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
-  Sun, Moon, ChevronsRight, Link2, CloudCheck, CloudAlert
+  Sun, Moon, Link2, CloudCheck, CloudAlert
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -906,7 +906,7 @@ function SwipeToEnter({ onEnter }) {
           transition: dragging ? "none" : "transform 300ms ease",
         }}
       >
-        <ChevronsRight size={22} className="text-[var(--primary-bg)]" />
+        <Plane size={20} className="text-[var(--primary-bg)]" style={{ transform: "rotate(45deg)" }} />
       </button>
     </div>
   );
