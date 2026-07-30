@@ -13,8 +13,13 @@ Vite + React + Tailwind app.
   things to do/eat, and restaurants.
 - **Budget tracker** — log expenses by description, amount, currency,
   category, and city; running totals per currency.
-- All progress (checklist + budget) is saved automatically to the
-  browser's `localStorage` — no backend required.
+- **Currency converter** — convert between AUD/EUR/HUF/CZK/USD, plus a
+  quick-reference table of common amounts converted to AUD. Fetches live
+  rates from [Frankfurter](https://www.frankfurter.app) when online and
+  caches the last known rates in `localStorage`, so it still works with
+  no signal (falling back to built-in approximate rates on first offline load).
+- All progress (checklist + budget + cached FX rates) is saved
+  automatically to the browser's `localStorage` — no backend required.
 
 ## Development
 

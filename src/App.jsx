@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
-  Ticket, Sparkles, X, Landmark
+  Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw
 } from "lucide-react";
 
 /* ---------------------------------------------------------------
@@ -217,6 +217,11 @@ const CATEGORIES = ["Flights", "Accommodation", "Food", "Activities", "Transport
 const CURRENCIES = ["AUD", "EUR", "HUF", "CZK", "USD"];
 const CURRENCY_SYMBOL = { AUD: "$", EUR: "€", HUF: "Ft", CZK: "Kč", USD: "$" };
 
+// Approximate rates (1 AUD = ...), used only until a live fetch succeeds or as an offline fallback.
+const FX_FALLBACK_RATES = { AUD: 1, EUR: 0.6, HUF: 236, CZK: 14.6, USD: 0.65 };
+const FX_STORAGE_KEY = "europe-trip-fx-rates";
+const FX_API_URL = "https://api.frankfurter.app/latest?from=AUD&to=EUR,HUF,CZK,USD";
+
 /* ---------------------------------------------------------------
    LOCAL STORAGE HELPERS
 --------------------------------------------------------------- */
@@ -301,6 +306,7 @@ export default function App() {
         {tab === "budget" && (
           <BudgetTab budget={budget} addExpense={addExpense} removeExpense={removeExpense} />
         )}
+        {tab === "convert" && <ConverterTab />}
         {activeCity && (
           <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
         )}
@@ -345,6 +351,7 @@ function TabBar({ tab, setTab, activeCity }) {
   const primaryTabs = [
     { id: "overview", label: "Itinerary", icon: CalendarDays },
     { id: "budget", label: "Budget", icon: Wallet },
+    { id: "convert", label: "Convert", icon: ArrowLeftRight },
   ];
   return (
     <div className="bg-[#F6F3EC] border-b border-[#e4ded0] sticky top-[72px] z-20">
@@ -763,6 +770,143 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   CURRENCY CONVERTER
+--------------------------------------------------------------- */
+
+function ConverterTab() {
+  const cached = loadFromStorage(FX_STORAGE_KEY);
+  const [amount, setAmount] = useState("100");
+  const [from, setFrom] = useState("AUD");
+  const [to, setTo] = useState("EUR");
+  const [rates, setRates] = useState(cached?.rates || FX_FALLBACK_RATES);
+  const [updatedAt, setUpdatedAt] = useState(cached?.date || null);
+  const [status, setStatus] = useState("loading"); // loading | live | cached | offline
+
+  const fetchRates = useCallback(async () => {
+    setStatus("loading");
+    try {
+      const res = await fetch(FX_API_URL);
+      if (!res.ok) throw new Error("bad response");
+      const data = await res.json();
+      const newRates = { AUD: 1, ...data.rates };
+      const date = data.date || new Date().toISOString().slice(0, 10);
+      setRates(newRates);
+      setUpdatedAt(date);
+      saveToStorage(FX_STORAGE_KEY, { rates: newRates, date });
+      setStatus("live");
+    } catch (e) {
+      setStatus(updatedAt ? "cached" : "offline");
+    }
+  }, [updatedAt]);
+
+  useEffect(() => { fetchRates(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const converted = useMemo(() => {
+    const amt = parseFloat(amount) || 0;
+    const inAud = from === "AUD" ? amt : amt / (rates[from] || 1);
+    return to === "AUD" ? inAud : inAud * (rates[to] || 1);
+  }, [amount, from, to, rates]);
+
+  const swap = () => {
+    setFrom(to);
+    setTo(from);
+  };
+
+  const quickAmounts = [10, 20, 50, 100];
+  const foreignCurrencies = CURRENCIES.filter((c) => c !== "AUD");
+
+  const statusText = {
+    loading: "Fetching latest rates…",
+    live: `Live rates as of ${updatedAt}.`,
+    cached: `Offline — showing rates last updated ${updatedAt}.`,
+    offline: "Offline — showing approximate rates.",
+  }[status];
+
+  return (
+    <div>
+      <p className="text-sm text-[#6b6656] mb-5">{statusText}</p>
+
+      <div className="bg-white rounded-2xl border border-[#e4ded0] p-4 mb-5">
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="font-mono text-[10px] uppercase tracking-wide text-[#8c8570]">Amount</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-3 py-2.5 text-lg font-mono outline-none mt-1"
+            />
+          </div>
+          <select
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-2 py-2.5 text-sm outline-none"
+          >
+            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <div className="flex justify-center my-1">
+          <button
+            onClick={swap}
+            aria-label="Swap currencies"
+            className="bg-[#20232B] text-white rounded-full p-2 mt-1"
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+        </div>
+
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="font-mono text-[10px] uppercase tracking-wide text-[#8c8570]">Converted</label>
+            <div className="w-full bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-3 py-2.5 text-lg font-mono font-700 mt-1" style={{ fontWeight: 700 }}>
+              {CURRENCY_SYMBOL[to]}{converted.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </div>
+          </div>
+          <select
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-2 py-2.5 text-sm outline-none"
+          >
+            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <button
+          onClick={fetchRates}
+          disabled={status === "loading"}
+          className="flex items-center gap-1.5 text-xs text-[#8c8570] mt-3 mx-auto"
+        >
+          <RefreshCw size={12} className={status === "loading" ? "animate-spin" : ""} />
+          Refresh rates
+        </button>
+      </div>
+
+      <Section icon={<Wallet size={15} />} title="Quick reference (→ AUD)" accent="#20232B">
+        <div className="space-y-2">
+          {foreignCurrencies.map((cur) => (
+            <div key={cur} className="bg-white rounded-xl border border-[#e4ded0] p-3">
+              <div className="font-mono text-xs text-[#8c8570] mb-2">{cur}</div>
+              <div className="grid grid-cols-4 gap-2">
+                {quickAmounts.map((amt) => (
+                  <div key={amt} className="text-center">
+                    <div className="text-[11px] text-[#8c8570] font-mono">{CURRENCY_SYMBOL[cur]}{amt}</div>
+                    <div className="text-sm font-medium font-mono">
+                      ${(amt / (rates[cur] || 1)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
     </div>
   );
 }
