@@ -7,8 +7,10 @@ Vite + React + Tailwind app.
 
 ## Features
 
-- **Itinerary** — full day-by-day schedule with times, booking status, and
-  travel notes; tap any item to check it off.
+- **Itinerary** — a route-overview mini-map (numbered, city-colored pins
+  connected in trip order) followed by a timeline of day cards, each with
+  a colored rail node and a city-tinted header band; tap any item to check
+  it off.
 - **City guides** — per-city weather, currency, tips, must-go highlights,
   things to do/eat, and restaurants.
 - **Budget tracker** — log expenses by description, amount, currency,
@@ -34,6 +36,9 @@ Vite + React + Tailwind app.
   every surface/text/border token swaps in one place.
 - Tab transitions, a check-off "pop" animation, and hover/press feedback
   throughout — all disabled under `prefers-reduced-motion`.
+- **Split navigation** — the four tools (Itinerary/Budget/Convert/Pack)
+  stay in a fixed, always-visible row; the eight cities live in their own
+  visually distinct scrollable rail underneath.
 - All progress (checklist + budget + cached FX rates + packing list +
   theme) is saved automatically to the browser's `localStorage` — no
   backend required.

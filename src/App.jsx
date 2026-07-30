@@ -554,8 +554,10 @@ export default function App() {
         }
       `}</style>
 
-      <Header saveState={saveState} theme={theme} toggleTheme={toggleTheme} />
-      <TabBar tab={tab} setTab={setTab} activeCity={activeCity} />
+      <div className="sticky top-0 z-20 bg-[var(--bg)]">
+        <Header saveState={saveState} theme={theme} toggleTheme={toggleTheme} />
+        <TabBar tab={tab} setTab={setTab} />
+      </div>
 
       <main className="max-w-3xl mx-auto px-4 pb-24 pt-5">
         <div key={tab} className="tab-content">
@@ -622,7 +624,7 @@ function Header({ saveState, theme, toggleTheme }) {
   const status = useMemo(() => getTripStatus(), []);
 
   return (
-    <div className="border-b border-[var(--border)] bg-[var(--bg)] sticky top-0 z-20">
+    <div>
       <div className="max-w-3xl mx-auto px-4 pt-5 pb-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] font-mono min-w-0">
@@ -657,7 +659,7 @@ function Header({ saveState, theme, toggleTheme }) {
    TAB BAR
 --------------------------------------------------------------- */
 
-function TabBar({ tab, setTab, activeCity }) {
+function TabBar({ tab, setTab }) {
   const primaryTabs = [
     { id: "overview", label: "Itinerary", icon: CalendarDays },
     { id: "budget", label: "Budget", icon: Wallet },
@@ -665,8 +667,9 @@ function TabBar({ tab, setTab, activeCity }) {
     { id: "pack", label: "Pack", icon: Luggage },
   ];
   return (
-    <div className="bg-[var(--bg)] border-b border-[var(--border)] sticky top-[72px] z-20">
-      <div className="max-w-3xl mx-auto px-4 flex gap-1 overflow-x-auto scrollbar-thin py-2.5">
+    <div className="border-b border-[var(--border)]">
+      {/* Tools row — fixed, always fully visible, no scrolling */}
+      <div className="max-w-3xl mx-auto px-4 pt-1 pb-2 flex gap-1.5">
         {primaryTabs.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
@@ -674,33 +677,41 @@ function TabBar({ tab, setTab, activeCity }) {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-[background-color,color,transform] shrink-0 hover:scale-105 active:scale-95
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-[background-color,color,transform] hover:scale-105 active:scale-95
                 ${active ? "bg-[var(--primary-bg)] text-[var(--primary-text)]" : "bg-[var(--surface)] text-[var(--text-tertiary)] border border-[var(--border)]"}`}
             >
-              <Icon size={14} />
+              <Icon size={14} className="shrink-0" />
               {t.label}
             </button>
           );
         })}
-        <div className="w-px bg-[var(--border)] mx-1 shrink-0" />
-        {CITIES.map((c) => {
-          const active = tab === c.id;
-          return (
-            <button
-              key={c.id}
-              onClick={() => setTab(c.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-[background-color,color,transform] shrink-0 border hover:scale-105 active:scale-95"
-              style={
-                active
-                  ? { background: c.accent, borderColor: c.accent, color: "white" }
-                  : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-tertiary)" }
-              }
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: active ? "white" : c.accent }} />
-              {c.name}
-            </button>
-          );
-        })}
+      </div>
+
+      {/* Cities rail — visually distinct band, its own horizontal scroll */}
+      <div className="border-t border-[var(--border)] bg-[var(--surface)]">
+        <div className="max-w-3xl mx-auto px-4 flex items-center gap-1.5 overflow-x-auto scrollbar-thin py-2">
+          <span className="sticky left-0 bg-[var(--surface)] pr-2 text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-mono shrink-0 z-10">
+            Cities
+          </span>
+          {CITIES.map((c) => {
+            const active = tab === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setTab(c.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-[background-color,color,transform] shrink-0 border hover:scale-105 active:scale-95"
+                style={
+                  active
+                    ? { background: c.accent, borderColor: c.accent, color: "white" }
+                    : { background: "var(--bg)", borderColor: "var(--border)", color: "var(--text-tertiary)" }
+                }
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: active ? "white" : c.accent }} />
+                {c.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -717,83 +728,123 @@ function iconFor(type) {
   return <Circle size={6} className="fill-current" />;
 }
 
+function TripRouteMap() {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const map = L.map(containerRef.current, { scrollWheelZoom: false });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const points = CITIES.map((c) => CITY_MAP[c.id].center);
+    L.polyline(points, { color: "#20232B", weight: 2, opacity: 0.4, dashArray: "2 8", lineCap: "round" }).addTo(map);
+
+    CITIES.forEach((c, i) => {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:22px;height:22px;border-radius:50%;background:${c.accent};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;color:white;font:600 11px Inter,sans-serif;">${i + 1}</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+      L.marker(CITY_MAP[c.id].center, { icon }).addTo(map).bindPopup(`<strong>${i + 1}. ${c.name}</strong><br/>${c.dates}`);
+    });
+
+    map.fitBounds(L.latLngBounds(points), { padding: [26, 26] });
+
+    return () => map.remove();
+  }, []);
+
+  return <div ref={containerRef} className="w-full h-48 rounded-2xl border border-[var(--border)] overflow-hidden mb-4" />;
+}
+
 function OverviewTab({ checklist, toggleCheck }) {
   return (
     <div>
+      <TripRouteMap />
       <p className="text-sm text-[var(--text-secondary)] mb-5">
         Tap any activity to check it off as you go. Everything's saved automatically.
       </p>
-      <div className="space-y-3">
-        {ITINERARY.map((day, idx) => {
-          const city = CITIES.find((c) => c.id === day.city);
-          return (
-            <div
-              key={idx}
-              className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden relative"
-            >
-              <div
-                className="absolute left-0 top-0 bottom-0 w-1"
-                style={{ background: city ? city.accent : "var(--text-primary)" }}
-              />
-              <div className="pl-4 pr-4 py-3.5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-xs text-[var(--text-muted)]">{day.day}</span>
-                    <span className="font-display font-600 text-[15px]" style={{ fontWeight: 600 }}>
-                      {day.date}
-                    </span>
-                  </div>
-                  {city && (
-                    <span
-                      className="text-[10px] uppercase tracking-wide font-medium px-2 py-0.5 rounded-full"
-                      style={{ background: city.accent + "1a", color: city.accent }}
-                    >
-                      {city.name}
-                    </span>
-                  )}
-                </div>
-                <div className="text-sm text-[var(--text-tertiary)] mb-2">{day.title}</div>
-                <div className="space-y-1.5">
-                  {day.items.map((item, i) => {
-                    const key = `overview-${idx}-${i}`;
-                    const checked = !!checklist[key];
-                    return (
-                      <div key={i}>
-                        <button
-                          onClick={() => toggleCheck(key)}
-                          className="flex items-start gap-2 w-full text-left group active:scale-[0.98] transition-transform"
+      <div className="relative pl-6">
+        <div className="absolute left-[9px] top-1 bottom-1 w-px bg-[var(--border)]" />
+        <div className="space-y-3">
+          {ITINERARY.map((day, idx) => {
+            const city = CITIES.find((c) => c.id === day.city);
+            const dotColor = city ? city.accent : "var(--text-muted)";
+            return (
+              <div key={idx} className="relative">
+                <span
+                  className="absolute -left-[19px] top-[18px] w-3 h-3 rounded-full ring-4 ring-[var(--bg)] z-10"
+                  style={{ background: dotColor }}
+                />
+                <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden">
+                  <div className="px-4 py-2.5" style={{ background: city ? city.accent + "14" : "transparent" }}>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-mono text-xs text-[var(--text-muted)]">{day.day}</span>
+                        <span
+                          className="font-display text-lg font-700"
+                          style={{ fontWeight: 700, color: city ? city.accent : "var(--text-primary)" }}
                         >
-                          {checked ? (
-                            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#2F8577] check-pop" />
-                          ) : (
-                            <Circle size={16} className="mt-0.5 shrink-0 text-[var(--icon-empty)]" />
-                          )}
-                          <span className={`text-[13.5px] flex-1 ${checked ? "line-through text-[var(--text-faint)]" : "text-[var(--text-body)]"}`}>
-                            {item.time && <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1.5">{item.time}</span>}
-                            {item.text}
-                          </span>
-                          {item.booked && (
-                            <span className="flex items-center gap-1 text-[10px] text-[#2F8577] font-medium shrink-0 mt-0.5">
-                              <Ticket size={11} /> booked
-                            </span>
-                          )}
-                        </button>
-                        {item.note && (
-                          <div
-                            className="ml-6 mt-1 mb-1 text-[12px] text-[var(--text-tertiary)] bg-[var(--bg)] border-l-2 rounded-r-md px-2.5 py-1.5"
-                            style={{ borderColor: city ? city.accent : "var(--text-primary)" }}
-                          >
-                            {item.note}
-                          </div>
-                        )}
+                          {day.date}
+                        </span>
                       </div>
-                    );
-                  })}
+                      {city && (
+                        <span className="text-[10px] uppercase tracking-wide font-semibold shrink-0" style={{ color: city.accent }}>
+                          {city.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="text-sm text-[var(--text-tertiary)] mb-2">{day.title}</div>
+                    <div className="space-y-1.5">
+                      {day.items.map((item, i) => {
+                        const key = `overview-${idx}-${i}`;
+                        const checked = !!checklist[key];
+                        return (
+                          <div key={i}>
+                            <button
+                              onClick={() => toggleCheck(key)}
+                              className="flex items-start gap-2 w-full text-left group active:scale-[0.98] transition-transform"
+                            >
+                              {checked ? (
+                                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#2F8577] check-pop" />
+                              ) : (
+                                <Circle size={16} className="mt-0.5 shrink-0 text-[var(--icon-empty)]" />
+                              )}
+                              <span className={`text-[13.5px] flex-1 ${checked ? "line-through text-[var(--text-faint)]" : "text-[var(--text-body)]"}`}>
+                                {item.time && <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1.5">{item.time}</span>}
+                                {item.text}
+                              </span>
+                              {item.booked && (
+                                <span className="flex items-center gap-1 text-[10px] text-[#2F8577] font-medium shrink-0 mt-0.5">
+                                  <Ticket size={11} /> booked
+                                </span>
+                              )}
+                            </button>
+                            {item.note && (
+                              <div
+                                className="ml-6 mt-1 mb-1 text-[12px] text-[var(--text-tertiary)] bg-[var(--bg)] border-l-2 rounded-r-md px-2.5 py-1.5"
+                                style={{ borderColor: city ? city.accent : "var(--text-primary)" }}
+                              >
+                                {item.note}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
