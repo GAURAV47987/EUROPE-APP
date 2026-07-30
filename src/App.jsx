@@ -220,7 +220,12 @@ const CURRENCY_SYMBOL = { AUD: "$", EUR: "€", HUF: "Ft", CZK: "Kč", USD: "$" 
 // Approximate rates (1 AUD = ...), used only until a live fetch succeeds or as an offline fallback.
 const FX_FALLBACK_RATES = { AUD: 1, EUR: 0.6, HUF: 236, CZK: 14.6, USD: 0.65 };
 const FX_STORAGE_KEY = "europe-trip-fx-rates";
-const FX_API_URL = "https://api.frankfurter.app/latest?from=AUD&to=EUR,HUF,CZK,USD";
+// CDN-backed mirrors of the same free, keyless dataset — tried in order so one host
+// being unreachable (blocked network, regional outage) doesn't take the feature down.
+const FX_API_URLS = [
+  "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/aud.json",
+  "https://latest.currency-api.pages.dev/v1/currencies/aud.json",
+];
 
 /* ---------------------------------------------------------------
    LOCAL STORAGE HELPERS
@@ -791,20 +796,29 @@ function ConverterTab() {
   const fetchRates = useCallback(async () => {
     setStatus("loading");
     setErrorDetail(null);
-    try {
-      const res = await fetch(FX_API_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const newRates = { AUD: 1, ...data.rates };
-      const date = data.date || new Date().toISOString().slice(0, 10);
-      setRates(newRates);
-      setUpdatedAt(date);
-      saveToStorage(FX_STORAGE_KEY, { rates: newRates, date });
-      setStatus("live");
-    } catch (e) {
-      setErrorDetail(e?.message || String(e));
-      setStatus(updatedAt ? "cached" : "offline");
+    const attempts = [];
+    for (const url of FX_API_URLS) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const aud = data.aud || {};
+        const newRates = { AUD: 1, EUR: aud.eur, HUF: aud.huf, CZK: aud.czk, USD: aud.usd };
+        if (!newRates.EUR || !newRates.HUF || !newRates.CZK || !newRates.USD) {
+          throw new Error("unexpected response shape");
+        }
+        const date = data.date || new Date().toISOString().slice(0, 10);
+        setRates(newRates);
+        setUpdatedAt(date);
+        saveToStorage(FX_STORAGE_KEY, { rates: newRates, date });
+        setStatus("live");
+        return;
+      } catch (e) {
+        attempts.push(e?.message || String(e));
+      }
     }
+    setErrorDetail(attempts.join(" / "));
+    setStatus(updatedAt ? "cached" : "offline");
   }, [updatedAt]);
 
   useEffect(() => { fetchRates(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
