@@ -459,6 +459,7 @@ function saveToStorage(key, value) {
 --------------------------------------------------------------- */
 
 export default function App() {
+  const [entered, setEntered] = useState(false);
   const [tab, setTab] = useState("overview");
   const [budget, setBudget] = useState([]);
   const [checklist, setChecklist] = useState({});
@@ -543,6 +544,20 @@ export default function App() {
         .modal-backdrop { animation: modalFadeIn 180ms ease-out; }
         .modal-panel { animation: modalPanelIn 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 
+        .route-glow {
+          background: linear-gradient(90deg, transparent, var(--text-primary), transparent);
+          background-size: 200% 100%;
+          opacity: 0.45;
+          animation: routeTravel 6s linear infinite;
+        }
+        @keyframes routeTravel {
+          from { background-position: 200% 0; }
+          to { background-position: -200% 0; }
+        }
+
+        @keyframes homeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .home-screen { animation: homeFadeIn 400ms ease-out; }
+
         @media (prefers-reduced-motion: reduce) {
           .tab-content, .check-pop { animation: none !important; }
           *, *::before, *::after {
@@ -554,26 +569,32 @@ export default function App() {
         }
       `}</style>
 
-      <div className="sticky top-0 z-20 bg-[var(--bg)]">
-        <Header saveState={saveState} theme={theme} toggleTheme={toggleTheme} />
-        <TabBar tab={tab} setTab={setTab} />
-      </div>
+      {!entered ? (
+        <HomeScreen onEnter={() => setEntered(true)} />
+      ) : (
+        <>
+          <div className="sticky top-0 z-20 bg-[var(--bg)]">
+            <Header saveState={saveState} theme={theme} toggleTheme={toggleTheme} />
+            <TabBar tab={tab} setTab={setTab} />
+          </div>
 
-      <main className="max-w-3xl mx-auto px-4 pb-24 pt-5">
-        <div key={tab} className="tab-content">
-          {tab === "overview" && (
-            <OverviewTab checklist={checklist} toggleCheck={toggleCheck} />
-          )}
-          {tab === "budget" && (
-            <BudgetTab budget={budget} addExpense={addExpense} removeExpense={removeExpense} />
-          )}
-          {tab === "convert" && <ConverterTab />}
-          {tab === "pack" && <PackingTab checklist={checklist} toggleCheck={toggleCheck} />}
-          {activeCity && (
-            <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
-          )}
-        </div>
-      </main>
+          <main className="max-w-3xl mx-auto px-4 pb-24 pt-5">
+            <div key={tab} className="tab-content">
+              {tab === "overview" && (
+                <OverviewTab checklist={checklist} toggleCheck={toggleCheck} />
+              )}
+              {tab === "budget" && (
+                <BudgetTab budget={budget} addExpense={addExpense} removeExpense={removeExpense} />
+              )}
+              {tab === "convert" && <ConverterTab />}
+              {tab === "pack" && <PackingTab checklist={checklist} toggleCheck={toggleCheck} />}
+              {activeCity && (
+                <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
+              )}
+            </div>
+          </main>
+        </>
+      )}
     </div>
   );
 }
@@ -614,6 +635,132 @@ function tripStatusText(status) {
     return `Day ${status.dayOfTrip} of ${status.totalDays}${status.cityName ? ` — in ${status.cityName}` : ""}`;
   }
   return "Trip complete — hope it was amazing! ✈️";
+}
+
+// The first itinerary item's own time (the Sydney departure flight) gives the
+// live countdown a real target instant, not just a midnight date boundary.
+function getDepartureInstant() {
+  const day = ITINERARY[0];
+  const flightTime = day.items[0]?.time;
+  const base = parseTripDate(day.date);
+  if (!flightTime) return base;
+  const match = flightTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return base;
+  let [, h, m, ampm] = match;
+  h = parseInt(h, 10);
+  m = parseInt(m, 10);
+  if (/pm/i.test(ampm) && h !== 12) h += 12;
+  if (/am/i.test(ampm) && h === 12) h = 0;
+  base.setHours(h, m, 0, 0);
+  return base;
+}
+
+function getCountdownParts(target, now) {
+  const diffMs = target - now;
+  if (diffMs <= 0) return null;
+  const totalSeconds = Math.floor(diffMs / 1000);
+  return {
+    days: Math.floor(totalSeconds / 86400),
+    hours: Math.floor((totalSeconds % 86400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: totalSeconds % 60,
+  };
+}
+
+function useLiveClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+/* ---------------------------------------------------------------
+   HOME SCREEN
+--------------------------------------------------------------- */
+
+function HomeScreen({ onEnter }) {
+  const now = useLiveClock();
+  const status = getTripStatus();
+  const departure = useMemo(() => getDepartureInstant(), []);
+  const parts = status.phase === "before" ? getCountdownParts(departure, now) : null;
+
+  return (
+    <div className="home-screen fixed inset-0 z-50 bg-[var(--bg)] flex flex-col items-center justify-center px-6 overflow-y-auto">
+      <div className="w-full max-w-sm py-12 flex flex-col items-center text-center gap-8">
+        <div>
+          <div className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.3em] text-[var(--text-muted)] font-mono mb-3">
+            <Plane size={12} strokeWidth={2} />
+            <span>Trip Planner</span>
+          </div>
+          <h1
+            className="font-display text-6xl leading-none"
+            style={{ fontWeight: 800, letterSpacing: "-0.02em", textWrap: "balance" }}
+          >
+            EUROPE 2026
+          </h1>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-4 leading-relaxed">
+            Sydney → Athens → Ios → Paros → Budapest → Prague → Český Krumlov → Hallstatt → Vienna → Sydney
+          </p>
+        </div>
+
+        <div className="w-full relative h-10 flex items-center justify-between">
+          <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-px bg-[var(--border)]" />
+          <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-px route-glow" />
+          {CITIES.map((c) => (
+            <span
+              key={c.id}
+              className="relative z-10 w-2.5 h-2.5 rounded-full ring-4 ring-[var(--bg)]"
+              style={{ background: c.accent, boxShadow: `0 0 10px ${c.accent}99` }}
+            />
+          ))}
+        </div>
+
+        {status.phase === "before" && parts && (
+          <div className="grid grid-cols-4 gap-2 w-full">
+            {[
+              ["Days", parts.days],
+              ["Hrs", parts.hours],
+              ["Min", parts.minutes],
+              ["Sec", parts.seconds],
+            ].map(([label, val]) => (
+              <div key={label} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl py-3">
+                <div className="font-display text-2xl font-700 tabular-nums" style={{ fontWeight: 700 }}>
+                  {String(val).padStart(2, "0")}
+                </div>
+                <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] mt-1">{label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {status.phase === "during" && (
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl py-4 px-6 w-full">
+            <div className="font-display text-2xl font-700" style={{ fontWeight: 700 }}>
+              Day {status.dayOfTrip} of {status.totalDays}
+            </div>
+            {status.cityName && (
+              <div className="text-sm text-[var(--text-secondary)] mt-1">Currently in {status.cityName}</div>
+            )}
+          </div>
+        )}
+
+        {status.phase === "after" && (
+          <div className="font-display text-xl font-700" style={{ fontWeight: 700 }}>
+            Trip complete — hope it was amazing! ✈️
+          </div>
+        )}
+
+        <button
+          onClick={onEnter}
+          className="w-full bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-full py-3.5 text-base font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg"
+        >
+          Enter Trip Planner
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /* ---------------------------------------------------------------
