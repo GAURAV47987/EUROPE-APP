@@ -3,7 +3,7 @@ import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
-  Sun, Moon
+  Sun, Moon, ChevronsRight
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -693,6 +693,136 @@ function useLiveClock() {
 }
 
 /* ---------------------------------------------------------------
+   SWIPE TO ENTER
+--------------------------------------------------------------- */
+
+const SWIPE_THUMB = 52;
+const SWIPE_TRACK_PAD = 4;
+const SWIPE_THRESHOLD = 0.8;
+
+function SwipeToEnter({ onEnter }) {
+  const trackRef = useRef(null);
+  const maxXRef = useRef(0);
+  const startXRef = useRef(0);
+  const draggedRef = useRef(false);
+  const suppressClickRef = useRef(false);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [triggered, setTriggered] = useState(false);
+
+  const measure = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return 0;
+    const width = track.getBoundingClientRect().width - SWIPE_THUMB - SWIPE_TRACK_PAD * 2;
+    maxXRef.current = Math.max(0, width);
+    return maxXRef.current;
+  }, []);
+
+  useEffect(() => {
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
+
+  const complete = useCallback(() => {
+    if (triggered) return;
+    setTriggered(true);
+    setDragging(false);
+    setDragX(maxXRef.current || measure());
+    onEnter();
+  }, [triggered, onEnter, measure]);
+
+  const cancel = useCallback(() => {
+    setDragging(false);
+    setDragX(0);
+  }, []);
+
+  const handlePointerDown = (e) => {
+    if (triggered) return;
+    measure();
+    draggedRef.current = false;
+    startXRef.current = e.clientX - dragX;
+    setDragging(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragging || triggered) return;
+    const raw = e.clientX - startXRef.current;
+    if (Math.abs(raw) > 6) draggedRef.current = true;
+    setDragX(Math.max(0, Math.min(raw, maxXRef.current)));
+  };
+
+  // A real drag that falls short must snap back and swallow the trailing
+  // synthetic click; a plain tap (no meaningful movement) leaves the click
+  // to fire naturally so mouse/keyboard users get a working fallback.
+  const handlePointerUp = () => {
+    if (triggered) return;
+    const max = maxXRef.current;
+    if (max > 0 && dragX / max >= SWIPE_THRESHOLD) {
+      complete();
+    } else if (draggedRef.current) {
+      cancel();
+      suppressClickRef.current = true;
+    }
+  };
+
+  const handleClick = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    complete();
+  };
+
+  const progress = maxXRef.current > 0 ? dragX / maxXRef.current : 0;
+
+  return (
+    <div
+      ref={trackRef}
+      className="relative w-full rounded-full bg-[var(--surface)] border border-[var(--border)] overflow-hidden select-none"
+      style={{ height: SWIPE_THUMB + SWIPE_TRACK_PAD * 2, touchAction: "pan-y" }}
+    >
+      <div
+        className="absolute inset-y-0 left-0 rounded-full bg-[var(--primary-bg)]"
+        style={{
+          width: `${SWIPE_THUMB + SWIPE_TRACK_PAD * 2 + dragX}px`,
+          transition: dragging ? "none" : "width 300ms ease",
+        }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-14">
+        <span
+          className="text-sm font-semibold text-[var(--text-tertiary)] truncate"
+          style={{ opacity: Math.max(0, 1 - progress * 1.6) }}
+        >
+          Swipe to enter trip planner
+        </span>
+      </div>
+      <button
+        type="button"
+        aria-label="Swipe or press to enter trip planner"
+        onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={cancel}
+        className="absolute flex items-center justify-center rounded-full bg-[var(--primary-text)] shadow-lg cursor-grab active:cursor-grabbing"
+        style={{
+          top: SWIPE_TRACK_PAD,
+          left: SWIPE_TRACK_PAD,
+          width: SWIPE_THUMB,
+          height: SWIPE_THUMB,
+          transform: `translateX(${dragX}px)`,
+          transition: dragging ? "none" : "transform 300ms ease",
+        }}
+      >
+        <ChevronsRight size={22} className="text-[var(--primary-bg)]" />
+      </button>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
    HOME SCREEN
 --------------------------------------------------------------- */
 
@@ -774,12 +904,7 @@ function HomeScreen({ onEnter, folding, onFoldEnd }) {
           </div>
         )}
 
-        <button
-          onClick={onEnter}
-          className="w-full bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-full py-3.5 text-base font-semibold hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg"
-        >
-          Enter Trip Planner
-        </button>
+        <SwipeToEnter onEnter={onEnter} />
       </div>
       </div>
     </div>
