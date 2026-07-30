@@ -21,8 +21,10 @@ Vite + React + Tailwind app.
 - **City maps** — an interactive Leaflet/OpenStreetMap view per city with
   pins for sights, areas, beaches, food & drink, and the hotel. Landmark
   pins are accurate; hotel/small-venue pins are best-effort approximations.
-- All progress (checklist + budget + cached FX rates) is saved
-  automatically to the browser's `localStorage` — no backend required.
+- **Packing list** — a checklist for two travellers, covering everything
+  from Athens/island heat to Hallstatt evening cold, with a packed counter.
+- All progress (checklist + budget + cached FX rates + packing list) is
+  saved automatically to the browser's `localStorage` — no backend required.
 
 ## Development
 

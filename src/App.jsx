@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
-  Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw
+  Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -340,6 +340,92 @@ const FX_API_URLS = [
 ];
 
 /* ---------------------------------------------------------------
+   PACKING LIST
+   Quantities are per person — pack two of everything listed as
+   "per person" for you and your wife. Spans ~30°C Greek island
+   heat down to ~14°C alpine evenings in Hallstatt.
+--------------------------------------------------------------- */
+
+const PACKING_LIST = [
+  {
+    id: "clothing",
+    title: "Clothing (2 people)",
+    items: [
+      "Breathable T-shirts/tops — 6-7 per person",
+      "Shorts — 3-4 per person, for Athens/Ios/Paros heat",
+      "Light trousers or jeans — 2 per person, for Budapest/Prague/Krumlov/Hallstatt/Vienna",
+      "One smart-casual outfit each — for Ios Club, Lunaz, the Danube river cruise",
+      "Light cardigan or jumper — 1-2 per person, for cooler evenings from Budapest onward",
+      "Packable rain jacket / windbreaker — 1 per person, for Hallstatt drizzle and Meltemi winds in Paros",
+      "Swimwear — 2 sets per person, for Ios and Paros beach days",
+      "Sarong or beach cover-up",
+      "Sleepwear",
+      "Underwear & socks — 10-12 pairs per person",
+      "A shoulders/knees-covering layer each — for churches in Athens, Budapest, Prague, Vienna",
+    ],
+  },
+  {
+    id: "footwear",
+    title: "Footwear (2 people)",
+    items: [
+      "Comfortable closed, grippy walking shoes — essential for the Acropolis' slippery marble and the cobblestones in Krumlov and Prague",
+      "Sandals or flip-flops — for beach days and boat trips",
+      "One pair of smart-casual shoes each — for dinners out",
+    ],
+  },
+  {
+    id: "documents",
+    title: "Documents & money",
+    items: [
+      "Both passports — check 6+ months validity",
+      "Printed or offline copies of flight/ferry/train tickets and hotel confirmations",
+      "Travel insurance details for both of you",
+      "Driver's licences, if renting a car anywhere",
+      "Cash — Euro, Hungarian Forint, Czech Koruna (small notes for Ios/Paros beach bars and Český Krumlov, which are often cash-preferred)",
+      "Two payment cards each, in case one gets blocked",
+      "Digital or photocopied backups of both passports, stored separately from the originals",
+    ],
+  },
+  {
+    id: "electronics",
+    title: "Electronics",
+    items: [
+      "Phone chargers for both of you, plus a shared power bank",
+      "EU-style Type C/F plug adapters — covers Greece, Hungary, Czechia, and Austria",
+      "Headphones",
+      "Camera, if you're not just shooting on your phones",
+      "Offline maps and entertainment downloaded ahead of the ferry/train legs",
+    ],
+  },
+  {
+    id: "health",
+    title: "Toiletries & health",
+    items: [
+      "High-SPF sunscreen — the Athens/island sun is intense in late August",
+      "After-sun or aloe vera gel",
+      "Insect repellent",
+      "Basic first-aid kit and any prescription medication for both of you, packed with a few spare days' buffer",
+      "Motion sickness tablets — for the Athens–Ios–Paros ferries",
+      "Shared and individual toiletry bags — toothbrush/paste, deodorant, skincare",
+      "Hand sanitiser and tissues",
+    ],
+  },
+  {
+    id: "extras",
+    title: "Extras & travel gear",
+    items: [
+      "Reusable water bottle each",
+      "A day bag or small backpack for excursions",
+      "Packing cubes — makes the 8-city hop much easier to live out of",
+      "Travel-size laundry detergent and a universal sink plug — handy for a 3-week trip",
+      "Sunglasses and a sun hat each",
+      "Neck pillow and eye mask each — for the long Sydney–Doha–Athens flights",
+      "A small luggage padlock each",
+    ],
+  },
+];
+
+/* ---------------------------------------------------------------
    LOCAL STORAGE HELPERS
 --------------------------------------------------------------- */
 
@@ -424,6 +510,7 @@ export default function App() {
           <BudgetTab budget={budget} addExpense={addExpense} removeExpense={removeExpense} />
         )}
         {tab === "convert" && <ConverterTab />}
+        {tab === "pack" && <PackingTab checklist={checklist} toggleCheck={toggleCheck} />}
         {activeCity && (
           <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
         )}
@@ -469,6 +556,7 @@ function TabBar({ tab, setTab, activeCity }) {
     { id: "overview", label: "Itinerary", icon: CalendarDays },
     { id: "budget", label: "Budget", icon: Wallet },
     { id: "convert", label: "Convert", icon: ArrowLeftRight },
+    { id: "pack", label: "Pack", icon: Luggage },
   ];
   return (
     <div className="bg-[#F6F3EC] border-b border-[#e4ded0] sticky top-[72px] z-20">
@@ -1114,6 +1202,49 @@ function ConverterTab() {
           ))}
         </div>
       </Section>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   PACKING LIST TAB
+--------------------------------------------------------------- */
+
+function PackingTab({ checklist, toggleCheck }) {
+  const totalItems = useMemo(
+    () => PACKING_LIST.reduce((sum, cat) => sum + cat.items.length, 0),
+    []
+  );
+  const checkedCount = useMemo(() => {
+    let count = 0;
+    PACKING_LIST.forEach((cat) => {
+      cat.items.forEach((_, i) => {
+        if (checklist[`pack-${cat.id}-${i}`]) count++;
+      });
+    });
+    return count;
+  }, [checklist]);
+
+  return (
+    <div>
+      <p className="text-sm text-[#6b6656] mb-1">
+        For two — quantities are per person unless noted. Covers everything from Athens heat to Hallstatt evenings.
+      </p>
+      <p className="text-sm font-medium text-[#20232B] mb-5">{checkedCount} / {totalItems} packed</p>
+
+      {PACKING_LIST.map((cat) => (
+        <Section key={cat.id} icon={<Luggage size={15} />} title={cat.title} accent="#20232B">
+          <div className="space-y-1.5">
+            {cat.items.map((item, i) => {
+              const key = `pack-${cat.id}-${i}`;
+              const checked = !!checklist[key];
+              return (
+                <ChecklistRow key={i} checked={checked} onClick={() => toggleCheck(key)} text={item} accent="#20232B" />
+              );
+            })}
+          </div>
+        </Section>
+      ))}
     </div>
   );
 }
