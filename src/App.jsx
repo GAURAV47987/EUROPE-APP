@@ -786,12 +786,14 @@ function ConverterTab() {
   const [rates, setRates] = useState(cached?.rates || FX_FALLBACK_RATES);
   const [updatedAt, setUpdatedAt] = useState(cached?.date || null);
   const [status, setStatus] = useState("loading"); // loading | live | cached | offline
+  const [errorDetail, setErrorDetail] = useState(null);
 
   const fetchRates = useCallback(async () => {
     setStatus("loading");
+    setErrorDetail(null);
     try {
       const res = await fetch(FX_API_URL);
-      if (!res.ok) throw new Error("bad response");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const newRates = { AUD: 1, ...data.rates };
       const date = data.date || new Date().toISOString().slice(0, 10);
@@ -800,6 +802,7 @@ function ConverterTab() {
       saveToStorage(FX_STORAGE_KEY, { rates: newRates, date });
       setStatus("live");
     } catch (e) {
+      setErrorDetail(e?.message || String(e));
       setStatus(updatedAt ? "cached" : "offline");
     }
   }, [updatedAt]);
@@ -829,7 +832,10 @@ function ConverterTab() {
 
   return (
     <div>
-      <p className="text-sm text-[#6b6656] mb-5">{statusText}</p>
+      <p className={`text-sm text-[#6b6656] ${errorDetail ? "mb-1" : "mb-5"}`}>{statusText}</p>
+      {errorDetail && (
+        <p className="text-[11px] font-mono text-[#c9463f] mb-5">Fetch failed: {errorDetail}</p>
+      )}
 
       <div className="bg-white rounded-2xl border border-[#e4ded0] p-4 mb-5">
         <div className="flex items-end gap-2">
