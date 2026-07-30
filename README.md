@@ -15,9 +15,12 @@ Vite + React + Tailwind app.
   category, and city; running totals per currency.
 - **Currency converter** — convert between AUD/EUR/HUF/CZK/USD, plus a
   quick-reference table of common amounts converted to AUD. Fetches live
-  rates from [Frankfurter](https://www.frankfurter.app) when online and
-  caches the last known rates in `localStorage`, so it still works with
-  no signal (falling back to built-in approximate rates on first offline load).
+  rates from a CDN-hosted rate feed when online and caches the last known
+  rates in `localStorage`, so it still works with no signal (falling back
+  to built-in approximate rates on first offline load).
+- **City maps** — an interactive Leaflet/OpenStreetMap view per city with
+  pins for sights, areas, beaches, food & drink, and the hotel. Landmark
+  pins are accurate; hotel/small-venue pins are best-effort approximations.
 - All progress (checklist + budget + cached FX rates) is saved
   automatically to the browser's `localStorage` — no backend required.
 

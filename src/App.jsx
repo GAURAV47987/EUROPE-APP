@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw
 } from "lucide-react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 /* ---------------------------------------------------------------
    TRIP DATA
@@ -210,6 +212,116 @@ const CITY_GUIDE = {
     eat: ["Sachertorte + coffee at a classic café", "Naschmarkt food stalls", "Wiener schnitzel"],
     mustgo: ["Schönbrunn Palace", "Graben for shopping"],
     tips: ["Public transport works on an honour system but is randomly checked — always carry a valid ticket", "Most museums are closed on Mondays — plan around it", "Tipping ~10% is customary, usually rounded up when paying"],
+  },
+};
+
+/* ---------------------------------------------------------------
+   MAP DATA
+   Landmark/area coordinates are accurate; hotel and small-venue
+   pins are best-effort approximations — verify before navigating.
+--------------------------------------------------------------- */
+
+const CITY_MAP = {
+  athens: {
+    center: [37.965, 23.735],
+    zoom: 12,
+    pins: [
+      { name: "Acropolis & Parthenon", lat: 37.9715, lng: 23.7267, type: "sight" },
+      { name: "Acropolis Museum", lat: 37.9684, lng: 23.7287, type: "sight" },
+      { name: "Ancient Agora", lat: 37.9755, lng: 23.7222, type: "sight" },
+      { name: "Plaka neighbourhood", lat: 37.9722, lng: 23.7297, type: "area" },
+      { name: "Psyrri neighbourhood", lat: 37.9788, lng: 23.7239, type: "area" },
+      { name: "Monastiraki flea market", lat: 37.9765, lng: 23.7256, type: "area" },
+      { name: "Lake Vouliagmeni", lat: 37.8168, lng: 23.7778, type: "sight" },
+      { name: "Panathenaic Stadium", lat: 37.9686, lng: 23.7414, type: "sight" },
+      { name: "Mount Lycabettus", lat: 37.9779, lng: 23.7444, type: "sight" },
+    ],
+  },
+  ios: {
+    center: [36.722, 25.28],
+    zoom: 12,
+    pins: [
+      { name: "Hotel Petradi", lat: 36.713, lng: 25.2845, type: "hotel" },
+      { name: "Far Out Beach Club", lat: 36.7104, lng: 25.2833, type: "beach" },
+      { name: "Mylopotas Beach", lat: 36.7115, lng: 25.285, type: "beach" },
+      { name: "Chora village + windmills", lat: 36.7217, lng: 25.2822, type: "area" },
+      { name: "Pathos (sunset spot)", lat: 36.7239, lng: 25.28, type: "sight" },
+      { name: "Homer's Tomb", lat: 36.7601, lng: 25.2419, type: "sight" },
+    ],
+  },
+  paros: {
+    center: [37.09, 25.19],
+    zoom: 11,
+    pins: [
+      { name: "Irene Rooms", lat: 37.124, lng: 25.2378, type: "hotel" },
+      { name: "Parikia old town", lat: 37.0844, lng: 25.1489, type: "area" },
+      { name: "Naoussa fishing village", lat: 37.1246, lng: 25.2372, type: "area" },
+      { name: "Lefkes mountain village", lat: 37.0397, lng: 25.1878, type: "area" },
+      { name: "Cabana Beach Club", lat: 37.091, lng: 25.152, type: "beach" },
+    ],
+  },
+  budapest: {
+    center: [47.5, 19.045],
+    zoom: 12,
+    pins: [
+      { name: "Amber Terrace Studios Downtown", lat: 47.4925, lng: 19.0567, type: "hotel" },
+      { name: "Hungarian Parliament Building", lat: 47.5076, lng: 19.0458, type: "sight" },
+      { name: "St. Stephen's Basilica", lat: 47.5006, lng: 19.0532, type: "sight" },
+      { name: "Chain Bridge", lat: 47.4979, lng: 19.0402, type: "sight" },
+      { name: "Buda Castle", lat: 47.4964, lng: 19.0398, type: "sight" },
+      { name: "Fisherman's Bastion", lat: 47.5022, lng: 19.0347, type: "sight" },
+      { name: "Széchenyi Thermal Bath", lat: 47.5189, lng: 19.0827, type: "sight" },
+      { name: "Szimpla Kert (ruin bar)", lat: 47.4973, lng: 19.0625, type: "food" },
+    ],
+  },
+  prague: {
+    center: [50.086, 14.415],
+    zoom: 13,
+    pins: [
+      { name: "The Charles (hotel, approx.)", lat: 50.0879, lng: 14.4041, type: "hotel" },
+      { name: "Old Town Square", lat: 50.087, lng: 14.4207, type: "sight" },
+      { name: "Charles Bridge", lat: 50.0865, lng: 14.4114, type: "sight" },
+      { name: "Wenceslas Square", lat: 50.081, lng: 14.4266, type: "sight" },
+      { name: "Prague Castle + St. Vitus Cathedral", lat: 50.091, lng: 14.4009, type: "sight" },
+      { name: "Lesser Town (Malá Strana)", lat: 50.0879, lng: 14.4041, type: "area" },
+      { name: "Petřín Hill", lat: 50.0837, lng: 14.395, type: "sight" },
+      { name: "Jewish Quarter", lat: 50.0913, lng: 14.4187, type: "area" },
+      { name: "Dancing House", lat: 50.0752, lng: 14.4136, type: "sight" },
+      { name: "Karlovy Lázně", lat: 50.0862, lng: 14.4133, type: "food" },
+    ],
+  },
+  krumlov: {
+    center: [48.812, 14.315],
+    zoom: 15,
+    pins: [
+      { name: "Český Krumlov Castle", lat: 48.8115, lng: 14.3151, type: "sight" },
+      { name: "Old town", lat: 48.8127, lng: 14.3175, type: "area" },
+      { name: "Egon Schiele Art Centrum", lat: 48.8109, lng: 14.3134, type: "sight" },
+    ],
+  },
+  hallstatt: {
+    center: [47.561, 13.645],
+    zoom: 15,
+    pins: [
+      { name: "Village square + church", lat: 47.5622, lng: 13.6493, type: "area" },
+      { name: "Hallstatt Skywalk", lat: 47.5601, lng: 13.6437, type: "sight" },
+      { name: "Hallstatt Salt Mine", lat: 47.5591, lng: 13.642, type: "sight" },
+      { name: "Lakeside promenade", lat: 47.5615, lng: 13.65, type: "area" },
+    ],
+  },
+  vienna: {
+    center: [48.198, 16.36],
+    zoom: 12,
+    pins: [
+      { name: "Four Points Flex by Sheraton (hotel, approx.)", lat: 48.1963, lng: 16.3489, type: "hotel" },
+      { name: "Schönbrunn Palace", lat: 48.1847, lng: 16.3122, type: "sight" },
+      { name: "St. Stephen's Cathedral", lat: 48.2085, lng: 16.3731, type: "sight" },
+      { name: "Belvedere Palace", lat: 48.1917, lng: 16.3805, type: "sight" },
+      { name: "Naschmarkt", lat: 48.1974, lng: 16.3651, type: "area" },
+      { name: "Graben shopping street", lat: 48.2089, lng: 16.3696, type: "area" },
+      { name: "Vienna State Opera", lat: 48.2035, lng: 16.3691, type: "sight" },
+      { name: "Museumsquartier", lat: 48.2036, lng: 16.3591, type: "sight" },
+    ],
   },
 };
 
@@ -494,6 +606,77 @@ function OverviewTab({ checklist, toggleCheck }) {
 }
 
 /* ---------------------------------------------------------------
+   CITY MAP
+--------------------------------------------------------------- */
+
+const PIN_TYPE_META = {
+  sight: { color: "#2C5F7C", label: "Sight" },
+  area: { color: "#6B4A70", label: "Area" },
+  beach: { color: "#2F8577", label: "Beach" },
+  food: { color: "#E0703C", label: "Food & drink" },
+  hotel: { color: "#C9463F", label: "Hotel" },
+};
+
+function CityMap({ mapData }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !mapData) return;
+
+    const map = L.map(containerRef.current, {
+      center: mapData.center,
+      zoom: mapData.zoom,
+      scrollWheelZoom: false,
+    });
+    mapRef.current = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    mapData.pins.forEach((pin) => {
+      const color = PIN_TYPE_META[pin.type]?.color || "#20232B";
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.45);"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+      L.marker([pin.lat, pin.lng], { icon }).addTo(map).bindPopup(`<strong>${pin.name}</strong>`);
+    });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [mapData]);
+
+  const typesPresent = useMemo(() => {
+    if (!mapData) return [];
+    return [...new Set(mapData.pins.map((p) => p.type))];
+  }, [mapData]);
+
+  return (
+    <div>
+      <div ref={containerRef} className="w-full h-72 rounded-xl border border-[#e4ded0] overflow-hidden" />
+      <div className="flex flex-wrap gap-3 mt-2">
+        {typesPresent.map((t) => (
+          <div key={t} className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIN_TYPE_META[t]?.color }} />
+            <span className="text-[11px] text-[#6b6656]">{PIN_TYPE_META[t]?.label}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-[#8c8570] mt-2">
+        Landmark pins are accurate; hotel and small-venue pins are approximate — verify before navigating.
+      </p>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
    CITY TAB
 --------------------------------------------------------------- */
 
@@ -523,6 +706,10 @@ function CityTab({ city, checklist, toggleCheck }) {
           <div className="font-display font-700 text-base mt-0.5" style={{ fontWeight: 700 }}>{city.currency}</div>
         </div>
       </div>
+
+      <Section icon={<MapPin size={15} />} title="Map" accent={city.accent}>
+        <CityMap mapData={CITY_MAP[city.id]} />
+      </Section>
 
       <Section icon={<Sparkles size={15} />} title="Good to know" accent={city.accent}>
         <div className="space-y-1.5">
