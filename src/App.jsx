@@ -473,6 +473,7 @@ export default function App() {
   const [tripCode, setTripCode] = useState(null);
   const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | error
   const [syncPanelOpen, setSyncPanelOpen] = useState(false);
+  const [syncError, setSyncError] = useState(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -554,12 +555,14 @@ export default function App() {
 
   const handleCreateTrip = async () => {
     setSyncStatus("syncing");
+    setSyncError(null);
     try {
       const { id, code } = await createSharedTrip(budget, checklist);
       setCloudTripId(id);
       setTripCode(code);
       setSyncStatus("synced");
     } catch (e) {
+      setSyncError(e?.message || String(e));
       setSyncStatus("error");
     }
   };
@@ -690,6 +693,7 @@ export default function App() {
               cloudTripId={cloudTripId}
               tripCode={tripCode}
               syncStatus={syncStatus}
+              syncError={syncError}
               onCreate={handleCreateTrip}
               onJoin={handleJoinTrip}
               onLeave={handleLeaveSync}
@@ -1058,7 +1062,7 @@ function Header({ saveState, theme, toggleTheme, cloudTripId, syncStatus, onOpen
    SYNC PANEL
 --------------------------------------------------------------- */
 
-function SyncPanel({ onClose, cloudTripId, tripCode, syncStatus, onCreate, onJoin, onLeave }) {
+function SyncPanel({ onClose, cloudTripId, tripCode, syncStatus, syncError, onCreate, onJoin, onLeave }) {
   const [codeInput, setCodeInput] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(null);
@@ -1129,7 +1133,7 @@ function SyncPanel({ onClose, cloudTripId, tripCode, syncStatus, onCreate, onJoi
               {syncStatus === "syncing" ? "Setting up…" : "Create shared trip"}
             </button>
             {syncStatus === "error" && (
-              <p className="text-xs text-[#c9463f]">Couldn't reach the sync server — check your connection and try again.</p>
+              <p className="text-xs text-[#c9463f] font-mono">Sync failed: {syncError || "unknown error"}</p>
             )}
 
             <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
