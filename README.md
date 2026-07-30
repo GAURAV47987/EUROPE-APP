@@ -59,6 +59,11 @@ Vite + React + Tailwind app.
   server-side, not just by keeping the code secret. Falls back to the
   local cache if the cloud is unreachable. See `src/supabase.js` and
   the schema/RLS/RPC setup in the project's Supabase SQL Editor history.
+- **Installable (PWA)** — "Add to Home Screen" on iOS/Android for a real
+  home-screen icon that opens full-screen, no browser chrome. A service
+  worker (via `vite-plugin-pwa`) precaches the app shell on first visit,
+  so it opens instantly with zero signal afterward — verified by loading
+  once online, then reloading fully offline.
 
 ## Development
 
