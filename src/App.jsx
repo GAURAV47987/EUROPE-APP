@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
-  Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage
+  Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
+  Sun, Moon
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,6 +11,8 @@ import "leaflet/dist/leaflet.css";
 /* ---------------------------------------------------------------
    TRIP DATA
 --------------------------------------------------------------- */
+
+const TRIP_YEAR = 2026;
 
 const CITIES = [
   { id: "athens", name: "Athens", country: "Greece", accent: "#2C5F7C", dates: "Aug 24 – 27", currency: "Euro (EUR)", weather: "~30–32°C, sunny & dry", weatherNote: "Peak summer heat — mornings for sightseeing, siesta midday" },
@@ -328,6 +331,15 @@ const CITY_MAP = {
 const CATEGORIES = ["Flights", "Accommodation", "Food", "Activities", "Transport", "Shopping", "Other"];
 const CURRENCIES = ["AUD", "EUR", "HUF", "CZK", "USD"];
 const CURRENCY_SYMBOL = { AUD: "$", EUR: "€", HUF: "Ft", CZK: "Kč", USD: "$" };
+const CATEGORY_COLOR_VAR = {
+  Flights: "var(--cat-flights)",
+  Accommodation: "var(--cat-accommodation)",
+  Food: "var(--cat-food)",
+  Activities: "var(--cat-activities)",
+  Transport: "var(--cat-transport)",
+  Shopping: "var(--cat-shopping)",
+  Other: "var(--cat-other)",
+};
 
 // Approximate rates (1 AUD = ...), used only until a live fetch succeeds or as an offline fallback.
 const FX_FALLBACK_RATES = { AUD: 1, EUR: 0.6, HUF: 236, CZK: 14.6, USD: 0.65 };
@@ -452,6 +464,18 @@ export default function App() {
   const [checklist, setChecklist] = useState({});
   const [loaded, setLoaded] = useState(false);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved
+  const [theme, setTheme] = useState(
+    () => (typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light")
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    try {
+      window.localStorage.setItem("europe-trip-theme", theme);
+    } catch (e) {}
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   // Load from storage on mount
   useEffect(() => {
@@ -490,56 +514,138 @@ export default function App() {
   const activeCity = CITIES.find((c) => c.id === tab);
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif" }} className="min-h-screen bg-[#F6F3EC] text-[#20232B]">
+    <div style={{ fontFamily: "'Inter', sans-serif" }} className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .scrollbar-thin::-webkit-scrollbar { height: 6px; }
-        .scrollbar-thin::-webkit-scrollbar-thumb { background: #d8d2c2; border-radius: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .tab-content { animation: fadeInUp 220ms ease-out; }
+
+        @keyframes checkPop {
+          0% { transform: scale(0.7); }
+          60% { transform: scale(1.18); }
+          100% { transform: scale(1); }
+        }
+        .check-pop { animation: checkPop 280ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalPanelIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-backdrop { animation: modalFadeIn 180ms ease-out; }
+        .modal-panel { animation: modalPanelIn 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+        @media (prefers-reduced-motion: reduce) {
+          .tab-content, .check-pop { animation: none !important; }
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+          }
+        }
       `}</style>
 
-      <Header saveState={saveState} />
+      <Header saveState={saveState} theme={theme} toggleTheme={toggleTheme} />
       <TabBar tab={tab} setTab={setTab} activeCity={activeCity} />
 
       <main className="max-w-3xl mx-auto px-4 pb-24 pt-5">
-        {tab === "overview" && (
-          <OverviewTab checklist={checklist} toggleCheck={toggleCheck} />
-        )}
-        {tab === "budget" && (
-          <BudgetTab budget={budget} addExpense={addExpense} removeExpense={removeExpense} />
-        )}
-        {tab === "convert" && <ConverterTab />}
-        {tab === "pack" && <PackingTab checklist={checklist} toggleCheck={toggleCheck} />}
-        {activeCity && (
-          <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
-        )}
+        <div key={tab} className="tab-content">
+          {tab === "overview" && (
+            <OverviewTab checklist={checklist} toggleCheck={toggleCheck} />
+          )}
+          {tab === "budget" && (
+            <BudgetTab budget={budget} addExpense={addExpense} removeExpense={removeExpense} />
+          )}
+          {tab === "convert" && <ConverterTab />}
+          {tab === "pack" && <PackingTab checklist={checklist} toggleCheck={toggleCheck} />}
+          {activeCity && (
+            <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
+          )}
+        </div>
       </main>
     </div>
   );
 }
 
 /* ---------------------------------------------------------------
+   TRIP STATUS
+--------------------------------------------------------------- */
+
+function parseTripDate(dateStr) {
+  return new Date(`${dateStr}, ${TRIP_YEAR}`);
+}
+
+function getTripStatus() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = parseTripDate(ITINERARY[0].date);
+  const end = parseTripDate(ITINERARY[ITINERARY.length - 1].date);
+  const totalDays = ITINERARY.length;
+
+  if (today < start) {
+    const daysUntil = Math.round((start - today) / 86400000);
+    return { phase: "before", daysUntil };
+  }
+  if (today > end) {
+    return { phase: "after" };
+  }
+  const dayIndex = Math.round((today - start) / 86400000);
+  const todayEntry = ITINERARY[dayIndex];
+  const city = todayEntry?.city ? CITIES.find((c) => c.id === todayEntry.city) : null;
+  return { phase: "during", dayOfTrip: dayIndex + 1, totalDays, cityName: city ? city.name : null };
+}
+
+function tripStatusText(status) {
+  if (status.phase === "before") {
+    return status.daysUntil === 1 ? "1 day until departure" : `${status.daysUntil} days until departure`;
+  }
+  if (status.phase === "during") {
+    return `Day ${status.dayOfTrip} of ${status.totalDays}${status.cityName ? ` — in ${status.cityName}` : ""}`;
+  }
+  return "Trip complete — hope it was amazing! ✈️";
+}
+
+/* ---------------------------------------------------------------
    HEADER
 --------------------------------------------------------------- */
 
-function Header({ saveState }) {
+function Header({ saveState, theme, toggleTheme }) {
+  const status = useMemo(() => getTripStatus(), []);
+
   return (
-    <div className="border-b border-[#e4ded0] bg-[#F6F3EC] sticky top-0 z-20">
-      <div className="max-w-3xl mx-auto px-4 pt-5 pb-3 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#8c8570] font-mono">
-            <Plane size={13} strokeWidth={2} />
-            <span>Sydney → Athens → Vienna → Sydney</span>
+    <div className="border-b border-[var(--border)] bg-[var(--bg)] sticky top-0 z-20">
+      <div className="max-w-3xl mx-auto px-4 pt-5 pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] font-mono min-w-0">
+            <Plane size={13} strokeWidth={2} className="shrink-0" />
+            <span className="truncate">Sydney → Athens → Vienna → Sydney</span>
           </div>
-          <h1 className="font-display text-2xl font-700 mt-0.5" style={{ fontWeight: 700 }}>
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="shrink-0 p-1.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:scale-105 active:scale-95 transition-all"
+          >
+            {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
+        </div>
+        <div className="flex items-end justify-between gap-3 mt-0.5">
+          <h1 className="font-display text-2xl font-700" style={{ fontWeight: 700, textWrap: "balance" }}>
             Europe & Greek Islands
           </h1>
-        </div>
-        <div className="text-right">
-          <div className="font-mono text-[11px] text-[#8c8570]">23 Aug – 15 Sep</div>
-          <div className={`text-[11px] mt-0.5 transition-opacity ${saveState === "idle" ? "opacity-0" : "opacity-100"}`}>
-            {saveState === "saving" ? "Saving…" : "Saved ✓"}
+          <div className="text-right shrink-0">
+            <div className="font-mono text-[11px] text-[var(--text-muted)]">{tripStatusText(status)}</div>
+            <div className={`text-[11px] mt-0.5 transition-opacity ${saveState === "idle" ? "opacity-0" : "opacity-100"}`}>
+              {saveState === "saving" ? "Saving…" : "Saved ✓"}
+            </div>
           </div>
         </div>
       </div>
@@ -559,7 +665,7 @@ function TabBar({ tab, setTab, activeCity }) {
     { id: "pack", label: "Pack", icon: Luggage },
   ];
   return (
-    <div className="bg-[#F6F3EC] border-b border-[#e4ded0] sticky top-[72px] z-20">
+    <div className="bg-[var(--bg)] border-b border-[var(--border)] sticky top-[72px] z-20">
       <div className="max-w-3xl mx-auto px-4 flex gap-1 overflow-x-auto scrollbar-thin py-2.5">
         {primaryTabs.map((t) => {
           const Icon = t.icon;
@@ -568,26 +674,26 @@ function TabBar({ tab, setTab, activeCity }) {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0
-                ${active ? "bg-[#20232B] text-white" : "bg-white text-[#4a4636] border border-[#e4ded0]"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-[background-color,color,transform] shrink-0 hover:scale-105 active:scale-95
+                ${active ? "bg-[var(--primary-bg)] text-[var(--primary-text)]" : "bg-[var(--surface)] text-[var(--text-tertiary)] border border-[var(--border)]"}`}
             >
               <Icon size={14} />
               {t.label}
             </button>
           );
         })}
-        <div className="w-px bg-[#e4ded0] mx-1 shrink-0" />
+        <div className="w-px bg-[var(--border)] mx-1 shrink-0" />
         {CITIES.map((c) => {
           const active = tab === c.id;
           return (
             <button
               key={c.id}
               onClick={() => setTab(c.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 border"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-[background-color,color,transform] shrink-0 border hover:scale-105 active:scale-95"
               style={
                 active
                   ? { background: c.accent, borderColor: c.accent, color: "white" }
-                  : { background: "white", borderColor: "#e4ded0", color: "#4a4636" }
+                  : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-tertiary)" }
               }
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: active ? "white" : c.accent }} />
@@ -614,7 +720,7 @@ function iconFor(type) {
 function OverviewTab({ checklist, toggleCheck }) {
   return (
     <div>
-      <p className="text-sm text-[#6b6656] mb-5">
+      <p className="text-sm text-[var(--text-secondary)] mb-5">
         Tap any activity to check it off as you go. Everything's saved automatically.
       </p>
       <div className="space-y-3">
@@ -623,16 +729,16 @@ function OverviewTab({ checklist, toggleCheck }) {
           return (
             <div
               key={idx}
-              className="bg-white rounded-2xl border border-[#e4ded0] overflow-hidden relative"
+              className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden relative"
             >
               <div
                 className="absolute left-0 top-0 bottom-0 w-1"
-                style={{ background: city ? city.accent : "#20232B" }}
+                style={{ background: city ? city.accent : "var(--text-primary)" }}
               />
               <div className="pl-4 pr-4 py-3.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-xs text-[#8c8570]">{day.day}</span>
+                    <span className="font-mono text-xs text-[var(--text-muted)]">{day.day}</span>
                     <span className="font-display font-600 text-[15px]" style={{ fontWeight: 600 }}>
                       {day.date}
                     </span>
@@ -646,7 +752,7 @@ function OverviewTab({ checklist, toggleCheck }) {
                     </span>
                   )}
                 </div>
-                <div className="text-sm text-[#4a4636] mb-2">{day.title}</div>
+                <div className="text-sm text-[var(--text-tertiary)] mb-2">{day.title}</div>
                 <div className="space-y-1.5">
                   {day.items.map((item, i) => {
                     const key = `overview-${idx}-${i}`;
@@ -655,15 +761,15 @@ function OverviewTab({ checklist, toggleCheck }) {
                       <div key={i}>
                         <button
                           onClick={() => toggleCheck(key)}
-                          className="flex items-start gap-2 w-full text-left group"
+                          className="flex items-start gap-2 w-full text-left group active:scale-[0.98] transition-transform"
                         >
                           {checked ? (
-                            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#2F8577]" />
+                            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#2F8577] check-pop" />
                           ) : (
-                            <Circle size={16} className="mt-0.5 shrink-0 text-[#c9c3b0]" />
+                            <Circle size={16} className="mt-0.5 shrink-0 text-[var(--icon-empty)]" />
                           )}
-                          <span className={`text-[13.5px] flex-1 ${checked ? "line-through text-[#a8a291]" : "text-[#31302a]"}`}>
-                            {item.time && <span className="font-mono text-[11px] text-[#8c8570] mr-1.5">{item.time}</span>}
+                          <span className={`text-[13.5px] flex-1 ${checked ? "line-through text-[var(--text-faint)]" : "text-[var(--text-body)]"}`}>
+                            {item.time && <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1.5">{item.time}</span>}
                             {item.text}
                           </span>
                           {item.booked && (
@@ -674,8 +780,8 @@ function OverviewTab({ checklist, toggleCheck }) {
                         </button>
                         {item.note && (
                           <div
-                            className="ml-6 mt-1 mb-1 text-[12px] text-[#4a4636] bg-[#F6F3EC] border-l-2 rounded-r-md px-2.5 py-1.5"
-                            style={{ borderColor: city ? city.accent : "#20232B" }}
+                            className="ml-6 mt-1 mb-1 text-[12px] text-[var(--text-tertiary)] bg-[var(--bg)] border-l-2 rounded-r-md px-2.5 py-1.5"
+                            style={{ borderColor: city ? city.accent : "var(--text-primary)" }}
                           >
                             {item.note}
                           </div>
@@ -725,7 +831,7 @@ function CityMap({ mapData }) {
     }).addTo(map);
 
     mapData.pins.forEach((pin) => {
-      const color = PIN_TYPE_META[pin.type]?.color || "#20232B";
+      const color = PIN_TYPE_META[pin.type]?.color || "var(--text-primary)";
       const icon = L.divIcon({
         className: "",
         html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.45);"></div>`,
@@ -748,16 +854,16 @@ function CityMap({ mapData }) {
 
   return (
     <div>
-      <div ref={containerRef} className="w-full h-72 rounded-xl border border-[#e4ded0] overflow-hidden" />
+      <div ref={containerRef} className="w-full h-72 rounded-xl border border-[var(--border)] overflow-hidden" />
       <div className="flex flex-wrap gap-3 mt-2">
         {typesPresent.map((t) => (
           <div key={t} className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIN_TYPE_META[t]?.color }} />
-            <span className="text-[11px] text-[#6b6656]">{PIN_TYPE_META[t]?.label}</span>
+            <span className="text-[11px] text-[var(--text-secondary)]">{PIN_TYPE_META[t]?.label}</span>
           </div>
         ))}
       </div>
-      <p className="text-[11px] text-[#8c8570] mt-2">
+      <p className="text-[11px] text-[var(--text-muted)] mt-2">
         Landmark pins are accurate; hotel and small-venue pins are approximate — verify before navigating.
       </p>
     </div>
@@ -784,13 +890,13 @@ function CityTab({ city, checklist, toggleCheck }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-5">
-        <div className="bg-white rounded-xl border border-[#e4ded0] p-3">
-          <div className="font-mono text-[10px] uppercase tracking-wide text-[#8c8570]">Weather</div>
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
+          <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Weather</div>
           <div className="font-display font-700 text-base mt-0.5" style={{ fontWeight: 700 }}>{city.weather}</div>
-          <div className="text-[11px] text-[#6b6656] mt-1">{city.weatherNote}</div>
+          <div className="text-[11px] text-[var(--text-secondary)] mt-1">{city.weatherNote}</div>
         </div>
-        <div className="bg-white rounded-xl border border-[#e4ded0] p-3">
-          <div className="font-mono text-[10px] uppercase tracking-wide text-[#8c8570]">Currency</div>
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
+          <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Currency</div>
           <div className="font-display font-700 text-base mt-0.5" style={{ fontWeight: 700 }}>{city.currency}</div>
         </div>
       </div>
@@ -802,9 +908,9 @@ function CityTab({ city, checklist, toggleCheck }) {
       <Section icon={<Sparkles size={15} />} title="Good to know" accent={city.accent}>
         <div className="space-y-1.5">
           {guide.tips.map((t, i) => (
-            <div key={i} className="flex items-start gap-2 bg-white border border-[#e4ded0] rounded-lg px-3 py-2">
+            <div key={i} className="flex items-start gap-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: city.accent }} />
-              <span className="text-sm text-[#31302a]">{t}</span>
+              <span className="text-sm text-[var(--text-body)]">{t}</span>
             </div>
           ))}
         </div>
@@ -865,17 +971,17 @@ function CityTab({ city, checklist, toggleCheck }) {
       <Section icon={<CalendarDays size={15} />} title="Day-by-day here" accent={city.accent}>
         <div className="space-y-2">
           {days.map((d, idx) => (
-            <div key={idx} className="bg-white rounded-xl border border-[#e4ded0] p-3">
+            <div key={idx} className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
               <div className="flex items-baseline gap-2 mb-1">
-                <span className="font-mono text-xs text-[#8c8570]">{d.day}</span>
+                <span className="font-mono text-xs text-[var(--text-muted)]">{d.day}</span>
                 <span className="font-display font-600 text-sm" style={{ fontWeight: 600 }}>{d.date}</span>
-                <span className="text-xs text-[#6b6656]">— {d.title}</span>
+                <span className="text-xs text-[var(--text-secondary)]">— {d.title}</span>
               </div>
-              <ul className="text-[13px] text-[#4a4636] space-y-0.5 ml-1">
+              <ul className="text-[13px] text-[var(--text-tertiary)] space-y-0.5 ml-1">
                 {d.items.map((it, i) => (
                   <li key={i} className="flex items-center gap-1.5">
                     {iconFor(it.icon)}
-                    {it.time && <span className="font-mono text-[11px] text-[#8c8570]">{it.time}</span>}
+                    {it.time && <span className="font-mono text-[11px] text-[var(--text-muted)]">{it.time}</span>}
                     <span>{it.text}</span>
                     {it.booked && <Ticket size={11} className="text-[#2F8577]" />}
                   </li>
@@ -891,13 +997,16 @@ function CityTab({ city, checklist, toggleCheck }) {
 
 function ChecklistRow({ checked, onClick, text, accent }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-2 w-full text-left bg-white border border-[#e4ded0] rounded-lg px-3 py-2">
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 w-full text-left bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 hover:border-[var(--text-faint)] active:scale-[0.98] transition-[transform,border-color]"
+    >
       {checked ? (
-        <CheckCircle2 size={16} style={{ color: accent }} className="shrink-0" />
+        <CheckCircle2 size={16} style={{ color: accent }} className="shrink-0 check-pop" />
       ) : (
-        <Circle size={16} className="text-[#c9c3b0] shrink-0" />
+        <Circle size={16} className="text-[var(--icon-empty)] shrink-0" />
       )}
-      <span className={`text-sm ${checked ? "line-through text-[#a8a291]" : "text-[#31302a]"}`}>{text}</span>
+      <span className={`text-sm ${checked ? "line-through text-[var(--text-faint)]" : "text-[var(--text-body)]"}`}>{text}</span>
     </button>
   );
 }
@@ -933,6 +1042,23 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
     return t;
   }, [budget]);
 
+  const categoryTotals = useMemo(() => {
+    const rates = loadFromStorage(FX_STORAGE_KEY)?.rates || FX_FALLBACK_RATES;
+    const t = {};
+    budget.forEach((e) => {
+      const amt = parseFloat(e.amount) || 0;
+      const aud = e.currency === "AUD" ? amt : amt / (rates[e.currency] || 1);
+      t[e.category] = (t[e.category] || 0) + aud;
+    });
+    return t;
+  }, [budget]);
+
+  const sortedCategories = useMemo(
+    () => CATEGORIES.filter((c) => categoryTotals[c] > 0).sort((a, b) => categoryTotals[b] - categoryTotals[a]),
+    [categoryTotals]
+  );
+  const maxCategoryTotal = Math.max(0, ...Object.values(categoryTotals));
+
   const submit = () => {
     if (!form.description || !form.amount) return;
     addExpense(form);
@@ -944,13 +1070,13 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
     <div>
       <div className="grid grid-cols-2 gap-2 mb-5">
         {Object.keys(totals).length === 0 && (
-          <div className="col-span-2 bg-white rounded-xl border border-[#e4ded0] p-4 text-sm text-[#8c8570] text-center">
+          <div className="col-span-2 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--text-muted)] text-center">
             No expenses logged yet
           </div>
         )}
         {Object.entries(totals).map(([cur, amt]) => (
-          <div key={cur} className="bg-white rounded-xl border border-[#e4ded0] p-3">
-            <div className="font-mono text-[11px] text-[#8c8570]">{cur} total</div>
+          <div key={cur} className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
+            <div className="font-mono text-[11px] text-[var(--text-muted)]">{cur} total</div>
             <div className="font-display text-xl font-700" style={{ fontWeight: 700 }}>
               {CURRENCY_SYMBOL[cur]}{amt.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
@@ -958,9 +1084,36 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
         ))}
       </div>
 
+      {sortedCategories.length > 0 && (
+        <Section icon={<Wallet size={15} />} title="By category (≈ AUD)" accent="var(--text-primary)">
+          <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 space-y-3">
+            {sortedCategories.map((cat) => {
+              const amt = categoryTotals[cat];
+              const pct = maxCategoryTotal > 0 ? (amt / maxCategoryTotal) * 100 : 0;
+              return (
+                <div key={cat}>
+                  <div className="flex items-baseline justify-between mb-1 gap-2">
+                    <span className="text-sm text-[var(--text-tertiary)]">{cat}</span>
+                    <span className="font-mono text-xs text-[var(--text-muted)] shrink-0">
+                      ≈${amt.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-[var(--border)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-500 ease-out"
+                      style={{ width: `${pct}%`, background: CATEGORY_COLOR_VAR[cat] }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
+
       <button
         onClick={() => setShowForm(true)}
-        className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-4 text-base font-bold mb-5 shadow-lg"
+        className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-4 text-base font-bold mb-5 shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-transform"
         style={{ background: "linear-gradient(135deg, #E0703C, #C9463F)", boxShadow: "0 4px 14px rgba(224,112,60,0.5)" }}
       >
         <Plus size={20} strokeWidth={3} /> ADD EXPENSE
@@ -968,10 +1121,10 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
 
       <div className="space-y-2">
         {[...budget].reverse().map((e) => (
-          <div key={e.id} className="bg-white rounded-xl border border-[#e4ded0] px-3 py-2.5 flex items-center justify-between">
+          <div key={e.id} className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-3 py-2.5 flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-[#20232B] truncate">{e.description}</div>
-              <div className="text-[11px] text-[#8c8570] font-mono">
+              <div className="text-sm font-medium text-[var(--text-primary)] truncate">{e.description}</div>
+              <div className="text-[11px] text-[var(--text-muted)] font-mono">
                 {e.category}{e.city ? ` · ${CITIES.find(c => c.id === e.city)?.name || e.city}` : ""}
               </div>
             </div>
@@ -979,7 +1132,10 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
               <span className="font-mono text-sm font-medium">
                 {CURRENCY_SYMBOL[e.currency]}{parseFloat(e.amount).toLocaleString()}
               </span>
-              <button onClick={() => removeExpense(e.id)} className="text-[#c9463f]">
+              <button
+                onClick={() => removeExpense(e.id)}
+                className="text-[#c9463f] hover:scale-110 active:scale-90 transition-transform"
+              >
                 <Trash2 size={15} />
               </button>
             </div>
@@ -988,14 +1144,22 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50" onClick={() => setShowForm(false)}>
+        <div
+          className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50 modal-backdrop"
+          onClick={() => setShowForm(false)}
+        >
           <div
-            className="bg-[#F6F3EC] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 space-y-3"
+            className="bg-[var(--bg)] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 space-y-3 modal-panel"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-1">
               <span className="font-display font-700 text-lg" style={{ fontWeight: 700 }}>New expense</span>
-              <button onClick={() => setShowForm(false)}><X size={18} /></button>
+              <button
+                onClick={() => setShowForm(false)}
+                className="hover:scale-110 active:scale-90 transition-transform text-[var(--text-tertiary)]"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             <input
@@ -1003,7 +1167,7 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
               placeholder="What was it for?"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full bg-white border border-[#e4ded0] rounded-lg px-3 py-2.5 text-sm outline-none"
+              className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none"
             />
 
             <div className="flex gap-2">
@@ -1013,12 +1177,12 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
                 placeholder="Amount"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                className="flex-1 bg-white border border-[#e4ded0] rounded-lg px-3 py-2.5 text-sm outline-none"
+                className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none"
               />
               <select
                 value={form.currency}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                className="bg-white border border-[#e4ded0] rounded-lg px-2 text-sm outline-none"
+                className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-2 text-sm outline-none"
               >
                 {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -1027,7 +1191,7 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full bg-white border border-[#e4ded0] rounded-lg px-3 py-2.5 text-sm outline-none"
+              className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none"
             >
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -1035,7 +1199,7 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
             <select
               value={form.city}
               onChange={(e) => setForm({ ...form, city: e.target.value })}
-              className="w-full bg-white border border-[#e4ded0] rounded-lg px-3 py-2.5 text-sm outline-none"
+              className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none"
             >
               <option value="">No city / general</option>
               {CITIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1043,7 +1207,7 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
 
             <button
               onClick={submit}
-              className="w-full bg-[#20232B] text-white rounded-lg py-2.5 text-sm font-medium mt-1"
+              className="w-full bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg py-2.5 text-sm font-medium mt-1 hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
               Add expense
             </button>
@@ -1121,27 +1285,27 @@ function ConverterTab() {
 
   return (
     <div>
-      <p className={`text-sm text-[#6b6656] ${errorDetail ? "mb-1" : "mb-5"}`}>{statusText}</p>
+      <p className={`text-sm text-[var(--text-secondary)] ${errorDetail ? "mb-1" : "mb-5"}`}>{statusText}</p>
       {errorDetail && (
         <p className="text-[11px] font-mono text-[#c9463f] mb-5">Fetch failed: {errorDetail}</p>
       )}
 
-      <div className="bg-white rounded-2xl border border-[#e4ded0] p-4 mb-5">
+      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-4 mb-5">
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <label className="font-mono text-[10px] uppercase tracking-wide text-[#8c8570]">Amount</label>
+            <label className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Amount</label>
             <input
               type="number"
               inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-3 py-2.5 text-lg font-mono outline-none mt-1"
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-lg font-mono outline-none mt-1"
             />
           </div>
           <select
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-2 py-2.5 text-sm outline-none"
+            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-2 py-2.5 text-sm outline-none"
           >
             {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -1151,7 +1315,7 @@ function ConverterTab() {
           <button
             onClick={swap}
             aria-label="Swap currencies"
-            className="bg-[#20232B] text-white rounded-full p-2 mt-1"
+            className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-full p-2 mt-1"
           >
             <ArrowLeftRight size={14} />
           </button>
@@ -1159,15 +1323,15 @@ function ConverterTab() {
 
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <label className="font-mono text-[10px] uppercase tracking-wide text-[#8c8570]">Converted</label>
-            <div className="w-full bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-3 py-2.5 text-lg font-mono font-700 mt-1" style={{ fontWeight: 700 }}>
+            <label className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Converted</label>
+            <div className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-lg font-mono font-700 mt-1" style={{ fontWeight: 700 }}>
               {CURRENCY_SYMBOL[to]}{converted.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </div>
           </div>
           <select
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="bg-[#F6F3EC] border border-[#e4ded0] rounded-lg px-2 py-2.5 text-sm outline-none"
+            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-2 py-2.5 text-sm outline-none"
           >
             {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -1176,22 +1340,22 @@ function ConverterTab() {
         <button
           onClick={fetchRates}
           disabled={status === "loading"}
-          className="flex items-center gap-1.5 text-xs text-[#8c8570] mt-3 mx-auto"
+          className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mt-3 mx-auto"
         >
           <RefreshCw size={12} className={status === "loading" ? "animate-spin" : ""} />
           Refresh rates
         </button>
       </div>
 
-      <Section icon={<Wallet size={15} />} title="Quick reference (→ AUD)" accent="#20232B">
+      <Section icon={<Wallet size={15} />} title="Quick reference (→ AUD)" accent="var(--text-primary)">
         <div className="space-y-2">
           {foreignCurrencies.map((cur) => (
-            <div key={cur} className="bg-white rounded-xl border border-[#e4ded0] p-3">
-              <div className="font-mono text-xs text-[#8c8570] mb-2">{cur}</div>
+            <div key={cur} className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
+              <div className="font-mono text-xs text-[var(--text-muted)] mb-2">{cur}</div>
               <div className="grid grid-cols-4 gap-2">
                 {quickAmounts.map((amt) => (
                   <div key={amt} className="text-center">
-                    <div className="text-[11px] text-[#8c8570] font-mono">{CURRENCY_SYMBOL[cur]}{amt}</div>
+                    <div className="text-[11px] text-[var(--text-muted)] font-mono">{CURRENCY_SYMBOL[cur]}{amt}</div>
                     <div className="text-sm font-medium font-mono">
                       ${(amt / (rates[cur] || 1)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </div>
@@ -1210,6 +1374,34 @@ function ConverterTab() {
    PACKING LIST TAB
 --------------------------------------------------------------- */
 
+function ProgressRing({ pct, size = 64, strokeWidth = 6 }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - pct / 100);
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth={strokeWidth} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--primary-bg)"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 500ms ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center font-mono text-xs font-medium text-[var(--text-primary)]">
+        {Math.round(pct)}%
+      </div>
+    </div>
+  );
+}
+
 function PackingTab({ checklist, toggleCheck }) {
   const totalItems = useMemo(
     () => PACKING_LIST.reduce((sum, cat) => sum + cat.items.length, 0),
@@ -1225,21 +1417,31 @@ function PackingTab({ checklist, toggleCheck }) {
     return count;
   }, [checklist]);
 
+  const pct = totalItems > 0 ? (checkedCount / totalItems) * 100 : 0;
+
   return (
     <div>
-      <p className="text-sm text-[#6b6656] mb-1">
+      <p className="text-sm text-[var(--text-secondary)] mb-4">
         For two — quantities are per person unless noted. Covers everything from Athens heat to Hallstatt evenings.
       </p>
-      <p className="text-sm font-medium text-[#20232B] mb-5">{checkedCount} / {totalItems} packed</p>
+      <div className="flex items-center gap-4 mb-5">
+        <ProgressRing pct={pct} />
+        <div>
+          <div className="font-display text-xl font-700" style={{ fontWeight: 700 }}>
+            {checkedCount} / {totalItems} packed
+          </div>
+          <div className="text-xs text-[var(--text-muted)] mt-0.5">Tap items below to check them off.</div>
+        </div>
+      </div>
 
       {PACKING_LIST.map((cat) => (
-        <Section key={cat.id} icon={<Luggage size={15} />} title={cat.title} accent="#20232B">
+        <Section key={cat.id} icon={<Luggage size={15} />} title={cat.title} accent="var(--text-primary)">
           <div className="space-y-1.5">
             {cat.items.map((item, i) => {
               const key = `pack-${cat.id}-${i}`;
               const checked = !!checklist[key];
               return (
-                <ChecklistRow key={i} checked={checked} onClick={() => toggleCheck(key)} text={item} accent="#20232B" />
+                <ChecklistRow key={i} checked={checked} onClick={() => toggleCheck(key)} text={item} accent="var(--text-primary)" />
               );
             })}
           </div>

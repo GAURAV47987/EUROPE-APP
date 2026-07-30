@@ -22,9 +22,21 @@ Vite + React + Tailwind app.
   pins for sights, areas, beaches, food & drink, and the hotel. Landmark
   pins are accurate; hotel/small-venue pins are best-effort approximations.
 - **Packing list** — a checklist for two travellers, covering everything
-  from Athens/island heat to Hallstatt evening cold, with a packed counter.
-- All progress (checklist + budget + cached FX rates + packing list) is
-  saved automatically to the browser's `localStorage` — no backend required.
+  from Athens/island heat to Hallstatt evening cold, with a circular
+  progress ring.
+- **Trip countdown** — the header shows days until departure, "Day N of 24"
+  and current city while travelling, or a wrap-up message afterward.
+- **Budget breakdown chart** — spend by category, normalized to AUD, using
+  a colorblind-validated categorical palette (see `dataviz` skill) with
+  direct labels on every bar.
+- **Dark mode** — a header toggle, defaulting to system preference,
+  persisted to `localStorage`; implemented via CSS custom properties so
+  every surface/text/border token swaps in one place.
+- Tab transitions, a check-off "pop" animation, and hover/press feedback
+  throughout — all disabled under `prefers-reduced-motion`.
+- All progress (checklist + budget + cached FX rates + packing list +
+  theme) is saved automatically to the browser's `localStorage` — no
+  backend required.
 
 ## Development
 
