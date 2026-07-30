@@ -50,6 +50,15 @@ Vite + React + Tailwind app.
 - All progress (checklist + budget + cached FX rates + packing list +
   theme) is saved automatically to the browser's `localStorage` — no
   backend required.
+- **Cross-device sync** (optional) — tap the sync icon in the header to
+  create a shared trip or join one with a code, so budget and checklist
+  progress stay in sync between two devices (e.g. you and your
+  partner). Backed by Supabase: anonymous auth (no accounts/passwords)
+  plus membership-gated Row Level Security — a device can only read or
+  write a trip it has actually joined via the pairing code, enforced
+  server-side, not just by keeping the code secret. Falls back to the
+  local cache if the cloud is unreachable. See `src/supabase.js` and
+  the schema/RLS/RPC setup in the project's Supabase SQL Editor history.
 
 ## Development
 

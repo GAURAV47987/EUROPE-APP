@@ -3,10 +3,11 @@ import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
-  Sun, Moon, ChevronsRight
+  Sun, Moon, ChevronsRight, Link2, CloudCheck, CloudAlert
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip } from "./supabase";
 
 /* ---------------------------------------------------------------
    TRIP DATA
@@ -468,6 +469,10 @@ export default function App() {
   const [theme, setTheme] = useState(
     () => (typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light")
   );
+  const [cloudTripId, setCloudTripId] = useState(() => getStoredTripId());
+  const [tripCode, setTripCode] = useState(null);
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | error
+  const [syncPanelOpen, setSyncPanelOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -478,14 +483,33 @@ export default function App() {
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
-  // Load from storage on mount
+  // Load from the cloud if paired, otherwise from local storage; fall back to
+  // the local cache if a paired device happens to load with no connection.
   useEffect(() => {
-    const b = loadFromStorage("europe-trip-budget");
-    if (b) setBudget(b);
-    const c = loadFromStorage("europe-trip-checklist");
-    if (c) setChecklist(c);
-    setLoaded(true);
-  }, []);
+    (async () => {
+      if (cloudTripId) {
+        setSyncStatus("syncing");
+        try {
+          const trip = await fetchSharedTrip(cloudTripId);
+          setBudget(trip.budget || []);
+          setChecklist(trip.checklist || {});
+          setSyncStatus("synced");
+        } catch (e) {
+          const b = loadFromStorage("europe-trip-budget");
+          if (b) setBudget(b);
+          const c = loadFromStorage("europe-trip-checklist");
+          if (c) setChecklist(c);
+          setSyncStatus("error");
+        }
+      } else {
+        const b = loadFromStorage("europe-trip-budget");
+        if (b) setBudget(b);
+        const c = loadFromStorage("europe-trip-checklist");
+        if (c) setChecklist(c);
+      }
+      setLoaded(true);
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const persist = useCallback((key, value) => {
     setSaveState("saving");
@@ -501,6 +525,22 @@ export default function App() {
   useEffect(() => { if (loaded) persist("europe-trip-budget", budget); }, [budget, loaded, persist]);
   useEffect(() => { if (loaded) persist("europe-trip-checklist", checklist); }, [checklist, loaded, persist]);
 
+  useEffect(() => {
+    if (!loaded || !cloudTripId) return;
+    updateSharedTrip(cloudTripId, { budget }).then(
+      () => setSyncStatus("synced"),
+      () => setSyncStatus("error")
+    );
+  }, [budget, loaded, cloudTripId]);
+
+  useEffect(() => {
+    if (!loaded || !cloudTripId) return;
+    updateSharedTrip(cloudTripId, { checklist }).then(
+      () => setSyncStatus("synced"),
+      () => setSyncStatus("error")
+    );
+  }, [checklist, loaded, cloudTripId]);
+
   const toggleCheck = (key) => {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -510,6 +550,33 @@ export default function App() {
   };
   const removeExpense = (id) => {
     setBudget((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const handleCreateTrip = async () => {
+    setSyncStatus("syncing");
+    try {
+      const { id, code } = await createSharedTrip(budget, checklist);
+      setCloudTripId(id);
+      setTripCode(code);
+      setSyncStatus("synced");
+    } catch (e) {
+      setSyncStatus("error");
+    }
+  };
+
+  const handleJoinTrip = async (code) => {
+    const trip = await joinSharedTrip(code); // lets SyncPanel show its own error on failure
+    setCloudTripId(trip.id);
+    setBudget(trip.budget || []);
+    setChecklist(trip.checklist || {});
+    setSyncStatus("synced");
+  };
+
+  const handleLeaveSync = () => {
+    clearStoredTripId();
+    setCloudTripId(null);
+    setTripCode(null);
+    setSyncStatus("idle");
   };
 
   const activeCity = CITIES.find((c) => c.id === tab);
@@ -590,7 +657,14 @@ export default function App() {
       {homePhase !== "home" && (
         <>
           <div className="sticky top-0 z-20 bg-[var(--bg)]">
-            <Header saveState={saveState} theme={theme} toggleTheme={toggleTheme} />
+            <Header
+              saveState={saveState}
+              theme={theme}
+              toggleTheme={toggleTheme}
+              cloudTripId={cloudTripId}
+              syncStatus={syncStatus}
+              onOpenSync={() => setSyncPanelOpen(true)}
+            />
             <TabBar tab={tab} setTab={setTab} />
           </div>
 
@@ -609,6 +683,18 @@ export default function App() {
               )}
             </div>
           </main>
+
+          {syncPanelOpen && (
+            <SyncPanel
+              onClose={() => setSyncPanelOpen(false)}
+              cloudTripId={cloudTripId}
+              tripCode={tripCode}
+              syncStatus={syncStatus}
+              onCreate={handleCreateTrip}
+              onJoin={handleJoinTrip}
+              onLeave={handleLeaveSync}
+            />
+          )}
         </>
       )}
     </div>
@@ -915,7 +1001,14 @@ function HomeScreen({ onEnter, folding, onFoldEnd }) {
    HEADER
 --------------------------------------------------------------- */
 
-function Header({ saveState, theme, toggleTheme }) {
+function SyncStatusIcon({ cloudTripId, syncStatus }) {
+  if (!cloudTripId) return <Link2 size={14} />;
+  if (syncStatus === "syncing") return <RefreshCw size={14} className="animate-spin" />;
+  if (syncStatus === "error") return <CloudAlert size={14} />;
+  return <CloudCheck size={14} />;
+}
+
+function Header({ saveState, theme, toggleTheme, cloudTripId, syncStatus, onOpenSync }) {
   const status = useMemo(() => getTripStatus(), []);
 
   return (
@@ -926,13 +1019,24 @@ function Header({ saveState, theme, toggleTheme }) {
             <Plane size={13} strokeWidth={2} className="shrink-0" />
             <span className="truncate">Sydney → Athens → Vienna → Sydney</span>
           </div>
-          <button
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="shrink-0 p-1.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:scale-105 active:scale-95 transition-all"
-          >
-            {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={onOpenSync}
+              aria-label="Sync across devices"
+              className={`p-1.5 rounded-full border border-[var(--border)] hover:text-[var(--text-primary)] hover:scale-105 active:scale-95 transition-all ${
+                cloudTripId && syncStatus !== "error" ? "text-[#2F8577]" : "text-[var(--text-muted)]"
+              }`}
+            >
+              <SyncStatusIcon cloudTripId={cloudTripId} syncStatus={syncStatus} />
+            </button>
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="p-1.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:scale-105 active:scale-95 transition-all"
+            >
+              {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          </div>
         </div>
         <div className="flex items-end justify-between gap-3 mt-0.5">
           <h1 className="font-display text-2xl font-700" style={{ fontWeight: 700, textWrap: "balance" }}>
@@ -945,6 +1049,115 @@ function Header({ saveState, theme, toggleTheme }) {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   SYNC PANEL
+--------------------------------------------------------------- */
+
+function SyncPanel({ onClose, cloudTripId, tripCode, syncStatus, onCreate, onJoin, onLeave }) {
+  const [codeInput, setCodeInput] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState(null);
+
+  const handleJoinClick = async () => {
+    if (!codeInput.trim()) return;
+    setJoining(true);
+    setJoinError(null);
+    try {
+      await onJoin(codeInput);
+      setCodeInput("");
+    } catch (e) {
+      setJoinError("That code doesn't match any trip — double-check it and try again.");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50 modal-backdrop" onClick={onClose}>
+      <div
+        className="bg-[var(--bg)] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 space-y-4 modal-panel"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <span className="font-display font-700 text-lg" style={{ fontWeight: 700 }}>
+            Sync across devices
+          </span>
+          <button onClick={onClose} className="hover:scale-110 active:scale-90 transition-transform text-[var(--text-tertiary)]">
+            <X size={18} />
+          </button>
+        </div>
+
+        {cloudTripId ? (
+          <>
+            <div className="flex items-center gap-2 text-sm text-[#2F8577]">
+              <CloudCheck size={16} /> Synced across devices
+            </div>
+            {tripCode && (
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+                <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-1">Share this code</div>
+                <div className="font-mono text-2xl font-700 tracking-widest" style={{ fontWeight: 700 }}>
+                  {tripCode}
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-[var(--text-muted)]">
+              Enter this code on your other device (tap the sync icon → Join with code) to see the same budget and
+              checklist there.
+            </p>
+            <button
+              onClick={onLeave}
+              className="w-full text-sm text-[#c9463f] py-2 hover:scale-[1.01] active:scale-[0.99] transition-transform"
+            >
+              Stop syncing this device
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Share your budget and checklist progress with another device — e.g. your partner's phone.
+            </p>
+            <button
+              onClick={onCreate}
+              disabled={syncStatus === "syncing"}
+              className="w-full bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg py-2.5 text-sm font-medium hover:scale-[1.01] active:scale-[0.99] transition-transform disabled:opacity-60"
+            >
+              {syncStatus === "syncing" ? "Setting up…" : "Create shared trip"}
+            </button>
+            {syncStatus === "error" && (
+              <p className="text-xs text-[#c9463f]">Couldn't reach the sync server — check your connection and try again.</p>
+            )}
+
+            <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+              <div className="flex-1 h-px bg-[var(--border)]" /> OR <div className="flex-1 h-px bg-[var(--border)]" />
+            </div>
+
+            <div className="space-y-2">
+              <input
+                placeholder="Enter code from other device"
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value)}
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none uppercase tracking-widest text-center font-mono"
+                maxLength={8}
+              />
+              {joinError && <p className="text-xs text-[#c9463f]">{joinError}</p>}
+              <button
+                onClick={handleJoinClick}
+                disabled={joining || !codeInput.trim()}
+                className="w-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg py-2.5 text-sm font-medium hover:scale-[1.01] active:scale-[0.99] transition-transform disabled:opacity-50"
+              >
+                {joining ? "Joining…" : "Join with code"}
+              </button>
+              <p className="text-xs text-[var(--text-muted)]">
+                Joining replaces this device's current budget and checklist with the shared trip's data.
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
