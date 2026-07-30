@@ -459,7 +459,7 @@ function saveToStorage(key, value) {
 --------------------------------------------------------------- */
 
 export default function App() {
-  const [entered, setEntered] = useState(false);
+  const [homePhase, setHomePhase] = useState("home"); // "home" | "folding" | "app"
   const [tab, setTab] = useState("overview");
   const [budget, setBudget] = useState([]);
   const [checklist, setChecklist] = useState({});
@@ -556,7 +556,17 @@ export default function App() {
         }
 
         @keyframes homeFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .home-screen { animation: homeFadeIn 400ms ease-out; }
+        .home-screen {
+          animation: homeFadeIn 400ms ease-out;
+          transform-origin: top center;
+          backface-visibility: hidden;
+        }
+
+        @keyframes foldAway {
+          0% { transform: rotateX(0deg) scale(1); opacity: 1; }
+          100% { transform: rotateX(-100deg) scale(0.92); opacity: 0; }
+        }
+        .home-folding { animation: foldAway 650ms cubic-bezier(0.55, 0, 0.1, 1) forwards; }
 
         @media (prefers-reduced-motion: reduce) {
           .tab-content, .check-pop { animation: none !important; }
@@ -569,9 +579,15 @@ export default function App() {
         }
       `}</style>
 
-      {!entered ? (
-        <HomeScreen onEnter={() => setEntered(true)} />
-      ) : (
+      {homePhase !== "app" && (
+        <HomeScreen
+          onEnter={() => setHomePhase("folding")}
+          folding={homePhase === "folding"}
+          onFoldEnd={() => setHomePhase("app")}
+        />
+      )}
+
+      {homePhase !== "home" && (
         <>
           <div className="sticky top-0 z-20 bg-[var(--bg)]">
             <Header saveState={saveState} theme={theme} toggleTheme={toggleTheme} />
@@ -680,14 +696,20 @@ function useLiveClock() {
    HOME SCREEN
 --------------------------------------------------------------- */
 
-function HomeScreen({ onEnter }) {
+function HomeScreen({ onEnter, folding, onFoldEnd }) {
   const now = useLiveClock();
   const status = getTripStatus();
   const departure = useMemo(() => getDepartureInstant(), []);
   const parts = status.phase === "before" ? getCountdownParts(departure, now) : null;
 
   return (
-    <div className="home-screen fixed inset-0 z-50 bg-[var(--bg)] flex flex-col items-center justify-center px-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50" style={{ perspective: "1400px" }}>
+      <div
+        className={`home-screen w-full h-full bg-[var(--bg)] flex flex-col items-center justify-center px-6 overflow-y-auto ${folding ? "home-folding" : ""}`}
+        onAnimationEnd={(e) => {
+          if (e.animationName === "foldAway") onFoldEnd?.();
+        }}
+      >
       <div className="w-full max-w-sm py-12 flex flex-col items-center text-center gap-8">
         <div>
           <div className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.3em] text-[var(--text-muted)] font-mono mb-3">
@@ -758,6 +780,7 @@ function HomeScreen({ onEnter }) {
         >
           Enter Trip Planner
         </button>
+      </div>
       </div>
     </div>
   );

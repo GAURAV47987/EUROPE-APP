@@ -11,7 +11,10 @@ Vite + React + Tailwind app.
   headline, an animated route dots strip, and a live-ticking
   days/hrs/min/sec countdown to the actual Sydney departure flight (falls
   back to "Day N of 24" while travelling, or a wrap-up message after).
-  Tap "Enter Trip Planner" to reach the app below.
+  Tapping "Enter Trip Planner" folds the screen away in 3D (CSS
+  `perspective` + `rotateX`) to reveal the app underneath, already
+  rendered so the fold uncovers it in real time rather than cutting to
+  a blank page.
 - **Itinerary** — a route-overview mini-map (numbered, city-colored pins
   connected in trip order) followed by a timeline of day cards, each with
   a colored rail node and a city-tinted header band; tap any item to check
