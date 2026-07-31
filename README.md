@@ -47,18 +47,22 @@ Vite + React + Tailwind app.
   every surface/text/border token swaps in one place.
 - Tab transitions, a check-off "pop" animation, and hover/press feedback
   throughout — all disabled under `prefers-reduced-motion`.
-- **Icon-grid navigation** — Itinerary, Budget, Convert, Pack, Docs, Ask,
-  and Reels sit in a grid of colored tiles (matching the budget category
-  palette), replacing the old scrolling pill row now that there are
-  seven of them. Tapping a non-Itinerary tile opens a dedicated page with
-  a back-to-Itinerary button and a grid quick-jump popover to reach any
-  other tool in one tap. The eight cities keep their own always-visible,
-  scrollable rail underneath, unchanged — tapping one still swaps content
-  in place rather than opening a separate page.
+- **Icon-grid navigation** — a clean home screen: the eight cities'
+  always-visible scrollable rail on top, then all seven tools (Itinerary,
+  Budget, Convert, Pack, Docs, Ask, Reels) as a grid of colored tiles
+  underneath (matching the budget category palette), replacing the old
+  scrolling pill row. Itinerary is a tool like any other now — tapping
+  its tile opens the day-by-day view + route map on a dedicated page,
+  instead of it living permanently on the home screen underneath the
+  nav — so the home screen stays a lightweight launcher no matter how
+  many tools get added. Every non-home tile opens with a back-to-Home
+  button and a grid quick-jump popover to reach any other tool in one
+  tap. Tapping a city still swaps content in place on the home screen
+  rather than opening a separate page.
 - **Edge-swipe to go back** — a rightward drag starting from the screen's
-  left edge (like iOS's native back gesture) returns to Itinerary from
-  any tool page or city, and steps back one level at a time inside
-  nested views (e.g. Reels' city detail → Reels' city grid → Itinerary).
+  left edge (like iOS's native back gesture) returns to the home screen
+  from any tool page or city, and steps back one level at a time inside
+  nested views (e.g. Reels' city detail → Reels' city grid → Home).
   Scoped to a thin edge strip so it never fights normal scrolling, the
   cities rail, or the map's own drag/pan.
 - All progress (checklist + budget + cached FX rates + packing list +

@@ -721,7 +721,7 @@ function useEdgeSwipeBack(onBack, enabled) {
 
 export default function App() {
   const [homePhase, setHomePhase] = useState("home"); // "home" | "folding" | "app"
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("hub");
   const [budget, setBudget] = useState([]);
   const [checklist, setChecklist] = useState({});
   const [loaded, setLoaded] = useState(false);
@@ -741,7 +741,7 @@ export default function App() {
       setReelsCity(null);
       return;
     }
-    if (tab !== "overview") setTab("overview");
+    if (tab !== "hub") setTab("hub");
   }, [tab, reelsCity]);
 
   useEdgeSwipeBack(handleSwipeBack, homePhase === "app");
@@ -1476,41 +1476,15 @@ const TOOL_DEFS = [
 ];
 
 function TabBar({ tab, setTab }) {
-  const isHub = tab === "overview" || CITIES.some((c) => c.id === tab);
+  const isHub = tab === "hub" || CITIES.some((c) => c.id === tab);
   return isHub ? <HubNav tab={tab} setTab={setTab} /> : <ToolPageHeader tab={tab} setTab={setTab} />;
 }
 
 function HubNav({ tab, setTab }) {
   return (
     <div className="border-b border-[var(--border)]">
-      {/* Tools grid — 3x2, no scrolling needed regardless of item count */}
-      <div className="max-w-3xl mx-auto px-4 pt-3 pb-3">
-        <div className="grid grid-cols-3 gap-2">
-          {TOOL_DEFS.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className="flex flex-col items-center justify-center gap-1 rounded-2xl py-3 border transition-transform hover:scale-[1.03] active:scale-95"
-                style={{
-                  background: active ? t.color : "var(--surface)",
-                  borderColor: active ? t.color : "var(--border)",
-                }}
-              >
-                <Icon size={18} color={active ? "#fff" : t.color} />
-                <span className="text-[11px] font-medium" style={{ color: active ? "#fff" : "var(--text-secondary)" }}>
-                  {t.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Cities rail — visually distinct band, its own horizontal scroll */}
-      <div className="border-t border-[var(--border)] bg-[var(--surface)]">
+      <div className="bg-[var(--surface)] border-b border-[var(--border)]">
         <div className="max-w-3xl mx-auto px-4 flex items-center gap-1.5 overflow-x-auto scrollbar-thin py-2">
           <span className="sticky left-0 bg-[var(--surface)] pr-2 text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-mono shrink-0 z-10">
             Cities
@@ -1535,6 +1509,32 @@ function HubNav({ tab, setTab }) {
           })}
         </div>
       </div>
+
+      {/* Tools grid — 3x3, no scrolling needed regardless of item count */}
+      <div className="max-w-3xl mx-auto px-4 pt-3 pb-3">
+        <div className="grid grid-cols-3 gap-2">
+          {TOOL_DEFS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className="flex flex-col items-center justify-center gap-1 rounded-2xl py-3 border transition-transform hover:scale-[1.03] active:scale-95"
+                style={{
+                  background: active ? t.color : "var(--surface)",
+                  borderColor: active ? t.color : "var(--border)",
+                }}
+              >
+                <Icon size={18} color={active ? "#fff" : t.color} />
+                <span className="text-[11px] font-medium" style={{ color: active ? "#fff" : "var(--text-secondary)" }}>
+                  {t.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1549,10 +1549,10 @@ function ToolPageHeader({ tab, setTab }) {
     <div className="border-b border-[var(--border)] relative">
       <div className="max-w-3xl mx-auto px-4 pt-3 pb-3 flex items-center justify-between">
         <button
-          onClick={() => setTab("overview")}
+          onClick={() => setTab("hub")}
           className="flex items-center gap-1 -ml-1 px-1 py-1 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
         >
-          <ChevronLeft size={18} /> Itinerary
+          <ChevronLeft size={18} /> Home
         </button>
         <div className="flex items-center gap-1.5 font-display text-base font-700" style={{ fontWeight: 700, color: def.color }}>
           <Icon size={16} /> {def.label}
