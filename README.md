@@ -79,6 +79,9 @@ Vite + React + Tailwind app.
   Budapest?", "rainy day in Vienna?"), aware of the route and dates.
   Backed by the same Groq-powered edge function as receipt scanning. See
   `supabase/functions/groq-assist`.
+- **Reels** — TikTok/Reels content-shoot ideas per city (landmark &
+  scenery, food, a mini-vlog outline, duo/couple shots), curated per city
+  and grounded in the real itinerary — static content, no AI call needed.
 - **Documents** — upload tickets, passport scans, and booking
   confirmations (images or PDFs, up to 20MB) once paired via sync; view
   or delete them from either synced device. Stored in a private Supabase

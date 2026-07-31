@@ -4,7 +4,7 @@ import {
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, ChevronLeft, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
   Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye,
-  Camera, MessageCircle, LayoutGrid
+  Camera, MessageCircle, LayoutGrid, Clapperboard
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -221,6 +221,119 @@ const CITY_GUIDE = {
     eat: ["Sachertorte + coffee at a classic café", "Naschmarkt food stalls", "Wiener schnitzel"],
     mustgo: ["Schönbrunn Palace", "Graben for shopping"],
     tips: ["Public transport works on an honour system but is randomly checked — always carry a valid ticket", "Most museums are closed on Mondays — plan around it", "Tipping ~10% is customary, usually rounded up when paying"],
+  },
+};
+
+/* ---------------------------------------------------------------
+   REEL / CONTENT-SHOOT IDEAS
+--------------------------------------------------------------- */
+
+const REEL_IDEAS = {
+  athens: {
+    landmark: [
+      { title: "Acropolis at golden hour", desc: "Arrive right at open or late afternoon light — the classic shot, worth prioritizing over a midday visit." },
+      { title: "Mount Lycabettus sunset panorama", desc: "Slow pan/reveal over the whole city as the sun goes down — one of the best wide shots in Athens." },
+      { title: "Monastiraki flea market walk-through", desc: "Handheld POV weaving through the stalls — good b-roll for a market-chaos montage." },
+    ],
+    food: [
+      { title: "Souvlaki/gyro rapid montage", desc: "Quick cuts across a few Plaka stands, one bite per clip, fast cuts." },
+      { title: "Loukoumades close-up", desc: "Honey-drenched Greek donuts — an easy ASMR-style bite shot." },
+      { title: "Freddo cappuccino \"how Greeks actually drink coffee\"", desc: "A quick explainer/reaction bit — freddo culture reads as genuinely novel to most viewers." },
+    ],
+    vlog: [{ title: "A day in ancient Athens", desc: "Acropolis → Ancient Agora → Plaka lunch → Monastiraki, stitched as one narrated day." }],
+    duo: [
+      { title: "Silhouette at the Parthenon, sunset", desc: "Classic couple silhouette against the columns." },
+      { title: "Rating the souvlaki stands", desc: "A light duo bit — reacting to and ranking a few stands together." },
+    ],
+  },
+  ios: {
+    landmark: [
+      { title: "Pathos sunset", desc: "The single most iconic Cyclades sunset shot on this leg — worth a tripod if you have one." },
+      { title: "Chora windmills, golden hour", desc: "Slow walk past the windmills as the light turns warm." },
+    ],
+    food: [
+      { title: "Fresh seafood by the port", desc: "A plated close-up shot — port-side seafood is very visual." },
+      { title: "Far Out Beach Club snacks/drinks", desc: "Quick beach-club-day montage clip." },
+    ],
+    vlog: [{ title: "24 hours in Ios", desc: "Beach club day → windmill sunset → port dinner, one continuous day arc." }],
+    duo: [
+      { title: "Jump shot / silhouette at Pathos", desc: "Timed right at sunset for the best light." },
+      { title: "Beach club POV day", desc: "Handheld, candid, low-effort — the setting does the work." },
+    ],
+  },
+  paros: {
+    landmark: [
+      { title: "Naoussa fishing village walk", desc: "Colorful boats, whitewashed streets — very reel-native visually." },
+      { title: "Boat tour on-water clips", desc: "Onboard POV shots throughout the day — even without a drone, movement + water reads well." },
+    ],
+    food: [
+      { title: "Fresh seafood in Naoussa", desc: "Plated shot with the harbor in the background." },
+      { title: "Cocktails at Come Back", desc: "Golden-hour drink shot to close out the Naoussa evening." },
+    ],
+    vlog: [{ title: "Boat day in Paros", desc: "Boat tour → Naoussa lunch → Cabana Beach Club evening." }],
+    duo: [{ title: "Parikia shopping street outfit walk", desc: "The narrow whitewashed lanes are a natural walk-and-talk backdrop." }],
+  },
+  budapest: {
+    landmark: [
+      { title: "Fisherman's Bastion at sunset", desc: "POV walk up through the turrets ending on a still shot over the Danube/Parliament skyline." },
+      { title: "Chain Bridge crossing, transition cut", desc: "Outfit or angle transition mid-bridge, landing on Buda Castle or the funicular." },
+      { title: "Parliament Building, blue hour", desc: "Arrive right as the lights turn on for a slow pan/reveal — a classic Budapest format." },
+    ],
+    food: [
+      { title: "\"What we ate in Budapest\" montage", desc: "Goulash, langos, Gerbeaud pastries, a drink at Szimpla — one clip per bite, fast cuts." },
+      { title: "Szimpla Kert \"come with me\"", desc: "Handheld walk-through of the mismatched ruin-bar decor and courtyard." },
+    ],
+    vlog: [{ title: "A day in Pest", desc: "Parliament → St. Stephen's Basilica → Chain Bridge → dinner along the Danube, one narrated day." }],
+    duo: [
+      { title: "Danube river cruise, night shot", desc: "Lit-up Parliament from the water — worth a steady/tripod shot over handheld." },
+      { title: "Rating the ruin bars", desc: "A duo reaction bit — ties naturally into Sparty night already on the itinerary." },
+      { title: "Széchenyi Thermal Bath GRWU", desc: "The yellow bathhouse architecture and steam are visually rich even before getting in." },
+    ],
+  },
+  prague: {
+    landmark: [
+      { title: "Charles Bridge at sunrise", desc: "Already a mustgo on the itinerary — go early for the empty-bridge shot before crowds arrive." },
+      { title: "Astronomical Clock chiming", desc: "Film the crowd's reaction on the hour, not just the clock itself." },
+    ],
+    food: [
+      { title: "Trdelník street-stand ASMR", desc: "Close-up on the cinnamon-sugar pastry being rolled and grilled." },
+      { title: "Traditional pub goulash & dumplings", desc: "Cozy interior shot — a good contrast to the outdoor landmark clips." },
+    ],
+    vlog: [{ title: "A day in Old Town Prague", desc: "Astronomical Clock → Charles Bridge → Castle → dinner." }],
+    duo: [
+      { title: "Charles Bridge sunrise, just the two of you", desc: "The payoff for the early wake-up — an empty bridge is rare otherwise." },
+      { title: "Dancing House quirky photo op", desc: "A fun, less-posed contrast to the classic landmark shots." },
+    ],
+  },
+  krumlov: {
+    landmark: [
+      { title: "Castle Tower viewpoint", desc: "The overhead shot of the whole fairytale town — the single best frame in Krumlov." },
+      { title: "River raft/canoe POV", desc: "On-water clips floating right through the old town." },
+    ],
+    food: [{ title: "Riverside café shot", desc: "Frame the castle in the background while you sit." }],
+    vlog: [{ title: "Fairytale town in a day", desc: "Castle climb → old town wander → river float — it's a short stop, so keep this tight." }],
+    duo: [{ title: "Couple shot from the Castle Tower", desc: "Overlooking the town — the view does the work here." }],
+  },
+  hallstatt: {
+    landmark: [
+      { title: "Hallstatt Skywalk", desc: "The single most iconic lake-village overhead shot in Austria." },
+      { title: "Classic lakeside photo spot", desc: "Church + lake reflection — recreate the postcard shot everyone knows." },
+    ],
+    food: [{ title: "Lakeside café with the view", desc: "Let the lake do the background work while you eat." }],
+    vlog: [{ title: "Why everyone's obsessed with Hallstatt", desc: "Skywalk → salt mine → lakeside walk." }],
+    duo: [{ title: "Recreate the postcard photo, together", desc: "Same lakeside spot everyone shoots — worth doing anyway, it's iconic for a reason." }],
+  },
+  vienna: {
+    landmark: [
+      { title: "Schönbrunn Palace gardens, wide shot", desc: "The symmetry of the gardens reads very well in a single wide frame." },
+      { title: "St. Stephen's Cathedral roof tiles, close-up", desc: "The patterned tile roof is an underrated detail shot most people miss." },
+    ],
+    food: [
+      { title: "Sachertorte + coffee at a classic café", desc: "The quintessential Vienna food reel — plate + café interior." },
+      { title: "Naschmarkt stall montage", desc: "Quick cuts across a few market stalls." },
+    ],
+    vlog: [{ title: "Last stop: Vienna — trip wrap-up", desc: "Since this is the final city, a highlight-reel style recap of the whole trip closes out naturally here." }],
+    duo: [{ title: "Palace garden walk", desc: "A calm, wide walk-and-talk shot to end the trip's content on." }],
   },
 };
 
@@ -786,6 +899,7 @@ export default function App() {
                 <DocsTab cloudTripId={cloudTripId} onOpenSync={() => setSyncPanelOpen(true)} />
               )}
               {tab === "ask" && <AskTab />}
+              {tab === "reels" && <ReelsTab />}
               {activeCity && (
                 <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
               )}
@@ -1297,6 +1411,7 @@ const TOOL_DEFS = [
   { id: "pack", label: "Pack", icon: Luggage, color: "var(--cat-activities)" },
   { id: "docs", label: "Docs", icon: FileText, color: "var(--cat-transport)" },
   { id: "ask", label: "Ask", icon: MessageCircle, color: "var(--cat-shopping)" },
+  { id: "reels", label: "Reels", icon: Clapperboard, color: "var(--cat-other)" },
 ];
 
 function TabBar({ tab, setTab }) {
@@ -2684,6 +2799,87 @@ function AskTab() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   REELS (content-shoot ideas per city)
+--------------------------------------------------------------- */
+
+const REEL_CATEGORIES = [
+  { key: "landmark", label: "Landmark & scenery" },
+  { key: "food", label: "Food" },
+  { key: "vlog", label: "Mini vlog" },
+  { key: "duo", label: "Duo / couple" },
+];
+
+function ReelsTab() {
+  const [selectedCityId, setSelectedCityId] = useState(null);
+  const selectedCity = CITIES.find((c) => c.id === selectedCityId);
+
+  if (!selectedCity) {
+    return (
+      <div>
+        <p className="text-sm text-[var(--text-secondary)] mb-5">
+          Pick a city to see reel/content ideas for it — landmark shots, food clips, a mini vlog outline, and a
+          couple of duo-specific ideas.
+        </p>
+        <div className="grid grid-cols-2 gap-2.5">
+          {CITIES.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setSelectedCityId(c.id)}
+              className="flex flex-col items-start gap-2 rounded-2xl border p-4 text-left hover:scale-[1.02] active:scale-95 transition-transform"
+              style={{ background: c.accent + "14", borderColor: c.accent + "40" }}
+            >
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: c.accent }} />
+              <span className="font-display text-base font-700" style={{ fontWeight: 700, color: c.accent }}>
+                {c.name}
+              </span>
+              <span className="text-[11px] text-[var(--text-muted)]">{c.dates}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const ideas = REEL_IDEAS[selectedCity.id];
+
+  return (
+    <div>
+      <button
+        onClick={() => setSelectedCityId(null)}
+        className="flex items-center gap-1 -ml-1 px-1 py-1 mb-3 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+      >
+        <ChevronLeft size={16} /> All cities
+      </button>
+
+      <div
+        className="rounded-2xl p-4 mb-5 text-white"
+        style={{ background: selectedCity.accent }}
+      >
+        <div className="font-mono text-[11px] uppercase tracking-widest opacity-80">{selectedCity.country}</div>
+        <div className="font-display text-xl font-700" style={{ fontWeight: 700 }}>{selectedCity.name} — reel ideas</div>
+      </div>
+
+      {REEL_CATEGORIES.map((cat) => {
+        const items = ideas?.[cat.key];
+        if (!items?.length) return null;
+        return (
+          <Section key={cat.key} icon={<Clapperboard size={15} />} title={cat.label} accent={selectedCity.accent}>
+            <div className="space-y-2">
+              {items.map((idea, i) => (
+                <div key={i} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3.5 py-3">
+                  <div className="text-sm font-medium text-[var(--text-primary)]">{idea.title}</div>
+                  <div className="text-[12px] text-[var(--text-secondary)] mt-0.5">{idea.desc}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        );
+      })}
     </div>
   );
 }
