@@ -64,9 +64,9 @@ Vite + React + Tailwind app.
   food", and a local, offline, zero-cost parser picks out the amount,
   currency, category, and city — pre-filled into the expense form for a
   one-tap confirm instead of manual typing. Snapping a photo of a receipt
-  instead goes through a Supabase Edge Function calling Google's Gemini
-  API (free tier), since reading a receipt image needs real AI vision.
-  See `supabase/functions/parse-expense`.
+  instead runs on-device OCR (Tesseract.js) right in the browser — no
+  account, no cost, no cloud call — and looks for a "total" line (falling
+  back to the largest amount found) to fill in the same fields.
 - **Documents** — upload tickets, passport scans, and booking
   confirmations (images or PDFs, up to 20MB) once paired via sync; view
   or delete them from either synced device. Stored in a private Supabase

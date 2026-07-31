@@ -8,9 +8,10 @@ import {
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { createWorker } from "tesseract.js";
 import {
   getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip,
-  listDocuments, uploadDocument, deleteDocument, getDocumentUrl, parseExpenseImage,
+  listDocuments, uploadDocument, deleteDocument, getDocumentUrl,
 } from "./supabase";
 
 /* ---------------------------------------------------------------
@@ -366,27 +367,70 @@ const EXPENSE_CITY_HINTS = [
   { re: /vienna/i, id: "vienna" },
 ];
 
+function detectCurrency(text) {
+  for (const hint of EXPENSE_CURRENCY_HINTS) {
+    if (hint.re.test(text)) return hint.currency;
+  }
+  return "AUD";
+}
+
+function detectCategory(text) {
+  const lower = text.toLowerCase();
+  for (const [cat, keywords] of Object.entries(EXPENSE_CATEGORY_KEYWORDS)) {
+    if (keywords.some((k) => lower.includes(k))) return cat;
+  }
+  return "Other";
+}
+
+function detectCity(text) {
+  for (const hint of EXPENSE_CITY_HINTS) {
+    if (hint.re.test(text)) return hint.id;
+  }
+  return "";
+}
+
 function parseExpenseLocal(text) {
   const amountMatch = text.match(/\d+(?:[.,]\d+)?/);
   const amount = amountMatch ? parseFloat(amountMatch[0].replace(",", ".")) : 0;
+  return {
+    description: text.trim(),
+    amount,
+    currency: detectCurrency(text),
+    category: detectCategory(text),
+    city: detectCity(text),
+  };
+}
 
-  let currency = "AUD";
-  for (const hint of EXPENSE_CURRENCY_HINTS) {
-    if (hint.re.test(text)) { currency = hint.currency; break; }
+function parseReceiptOcrText(rawText) {
+  const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+  const moneyRe = /\d+[.,]\d{2}\b/g;
+
+  let amount = 0;
+  const totalLine = lines.find((l) => /\bgrand total\b/i.test(l))
+    || lines.find((l) => /\btotal\b/i.test(l) && !/\bsub\s*total\b/i.test(l));
+  if (totalLine) {
+    const matches = totalLine.match(moneyRe);
+    if (matches) amount = parseFloat(matches[matches.length - 1].replace(",", "."));
+  }
+  if (!amount) {
+    const allMatches = rawText.match(moneyRe);
+    if (allMatches) {
+      amount = Math.max(...allMatches.map((m) => parseFloat(m.replace(",", "."))));
+    } else {
+      const plainNumbers = rawText.match(/\d+(?:[.,]\d+)?/g);
+      if (plainNumbers) amount = Math.max(...plainNumbers.map((m) => parseFloat(m.replace(",", "."))));
+    }
   }
 
-  let category = "Other";
-  const lower = text.toLowerCase();
-  for (const [cat, keywords] of Object.entries(EXPENSE_CATEGORY_KEYWORDS)) {
-    if (keywords.some((k) => lower.includes(k))) { category = cat; break; }
-  }
+  const description = lines.find((l) => l.length >= 3 && !/^\d+([.,]\d+)?$/.test(l)) || "Receipt";
 
-  let city = "";
-  for (const hint of EXPENSE_CITY_HINTS) {
-    if (hint.re.test(text)) { city = hint.id; break; }
-  }
-
-  return { description: text.trim(), amount, currency, category, city };
+  return {
+    description: description.slice(0, 120),
+    amount: amount || 0,
+    currency: detectCurrency(rawText),
+    category: detectCategory(rawText),
+    city: detectCity(rawText),
+  };
 }
 const CATEGORY_COLOR_VAR = {
   Flights: "var(--cat-flights)",
@@ -1699,13 +1743,16 @@ function SmartAddModal({ onClose, onParsed }) {
     if (!file) return;
     setBusy(true);
     setError(null);
+    let worker;
     try {
-      const base64 = await resizeImageToBase64(file);
-      const parsed = await parseExpenseImage(base64, "image/jpeg");
-      onParsed(parsed);
+      const base64 = await resizeImageToBase64(file, 1600, 0.85);
+      worker = await createWorker("eng");
+      const { data } = await worker.recognize(`data:image/jpeg;base64,${base64}`);
+      onParsed(parseReceiptOcrText(data.text));
     } catch (e) {
       setError(e?.message || String(e));
     } finally {
+      if (worker) await worker.terminate().catch(() => {});
       setBusy(false);
     }
   };
@@ -1765,7 +1812,9 @@ function SmartAddModal({ onClose, onParsed }) {
         >
           <Camera size={16} /> Scan receipt
         </button>
-        <p className="text-[11px] text-[var(--text-muted)] text-center">Scanning a receipt uses AI and needs a connection.</p>
+        <p className="text-[11px] text-[var(--text-muted)] text-center">
+          Reads the receipt on your phone — first scan needs a connection to download the reader (~10MB), after that it works offline too.
+        </p>
 
         {busy && <p className="text-xs text-[var(--text-muted)] text-center">Reading…</p>}
         {error && <p className="text-xs text-[#c9463f] font-mono">{error}</p>}
