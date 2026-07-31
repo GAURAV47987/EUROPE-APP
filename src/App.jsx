@@ -2442,7 +2442,7 @@ function AskTab() {
   };
 
   return (
-    <div className="flex flex-col" style={{ minHeight: "60vh" }}>
+    <div className="flex flex-col">
       {messages.length === 0 ? (
         <div className="text-center py-8">
           <MessageCircle size={32} className="mx-auto text-[var(--text-muted)] mb-3" />
