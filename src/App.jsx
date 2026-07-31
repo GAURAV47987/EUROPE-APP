@@ -1454,12 +1454,19 @@ function TripRouteMap() {
       L.marker(CITY_MAP[c.id].center, { icon }).addTo(map).bindPopup(`<strong>${i + 1}. ${c.name}</strong><br/>${c.dates}`);
     });
 
-    map.fitBounds(L.latLngBounds(points), { padding: [26, 26] });
+    // The tab-content mount animation can leave the container at a stale
+    // size for a frame, which throws off fitBounds' zoom calculation (it
+    // can end up zoomed out to the whole continent). Force a resize check
+    // right before fitting once the browser has settled the real layout.
+    requestAnimationFrame(() => {
+      map.invalidateSize();
+      map.fitBounds(L.latLngBounds(points), { padding: [26, 26] });
+    });
 
     return () => map.remove();
   }, []);
 
-  return <div ref={containerRef} className="w-full h-48 rounded-2xl border border-[var(--border)] overflow-hidden mb-4" />;
+  return <div ref={containerRef} className="relative isolate w-full h-48 rounded-2xl border border-[var(--border)] overflow-hidden mb-4" />;
 }
 
 function OverviewTab({ checklist, toggleCheck }) {
@@ -1581,6 +1588,8 @@ function CityMap({ mapData }) {
       maxZoom: 19,
     }).addTo(map);
 
+    requestAnimationFrame(() => map.invalidateSize());
+
     mapData.pins.forEach((pin) => {
       const color = PIN_TYPE_META[pin.type]?.color || "var(--text-primary)";
       const icon = L.divIcon({
@@ -1605,7 +1614,7 @@ function CityMap({ mapData }) {
 
   return (
     <div>
-      <div ref={containerRef} className="w-full h-72 rounded-xl border border-[var(--border)] overflow-hidden" />
+      <div ref={containerRef} className="relative isolate w-full h-72 rounded-xl border border-[var(--border)] overflow-hidden" />
       <div className="flex flex-wrap gap-3 mt-2">
         {typesPresent.map((t) => (
           <div key={t} className="flex items-center gap-1.5">
