@@ -1730,7 +1730,6 @@ function SmartAddModal({ onClose, onParsed }) {
 
         <div className="flex gap-2">
           <input
-            autoFocus
             placeholder="e.g. 40 euros lunch in Athens"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -1937,7 +1936,6 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
             </div>
 
             <input
-              autoFocus
               placeholder="What was it for?"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
