@@ -81,7 +81,9 @@ Vite + React + Tailwind app.
   home-screen icon that opens full-screen, no browser chrome. A service
   worker (via `vite-plugin-pwa`) precaches the app shell on first visit,
   so it opens instantly with zero signal afterward — verified by loading
-  once online, then reloading fully offline.
+  once online, then reloading fully offline. A refresh button in the
+  header (next to dark mode) forces the latest deployed version to take
+  over immediately, instead of needing to fully close and reopen the app.
 
 ## Development
 

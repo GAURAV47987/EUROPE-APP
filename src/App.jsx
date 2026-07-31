@@ -12,6 +12,7 @@ import {
   getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip,
   listDocuments, uploadDocument, deleteDocument, getDocumentUrl, parseReceiptWithGroq, askTripQuestion,
 } from "./supabase";
+import { refreshApp } from "./pwa.js";
 
 /* ---------------------------------------------------------------
    TRIP DATA
@@ -1118,6 +1119,12 @@ function SyncStatusIcon({ cloudTripId, syncStatus }) {
 
 function Header({ saveState, theme, toggleTheme, cloudTripId, syncStatus, onOpenSync }) {
   const status = useMemo(() => getTripStatus(), []);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    refreshApp();
+  };
 
   return (
     <div>
@@ -1143,6 +1150,14 @@ function Header({ saveState, theme, toggleTheme, cloudTripId, syncStatus, onOpen
               className="p-1.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:scale-105 active:scale-95 transition-all"
             >
               {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              aria-label="Refresh app to latest version"
+              className="p-1.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:scale-105 active:scale-95 transition-all disabled:opacity-60"
+            >
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
