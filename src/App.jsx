@@ -555,7 +555,39 @@ function saveToStorage(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
-function resizeImageToBase64(file, maxDim = 1024, quality = 0.8) {
+// Otsu's method: picks the grayscale threshold that best splits a bimodal
+// histogram (receipt ink vs. paper) into two classes, maximizing the
+// variance between them. Far more robust across lighting/exposure than a
+// fixed cutoff.
+function otsuThreshold(histogram, totalPixels) {
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * histogram[t];
+  let sumB = 0;
+  let weightB = 0;
+  let maxVariance = 0;
+  let threshold = 127;
+  for (let t = 0; t < 256; t++) {
+    weightB += histogram[t];
+    if (weightB === 0) continue;
+    const weightF = totalPixels - weightB;
+    if (weightF === 0) break;
+    sumB += t * histogram[t];
+    const meanB = sumB / weightB;
+    const meanF = (sum - sumB) / weightF;
+    const variance = weightB * weightF * (meanB - meanF) * (meanB - meanF);
+    if (variance > maxVariance) {
+      maxVariance = variance;
+      threshold = t;
+    }
+  }
+  return threshold;
+}
+
+// Resize + grayscale + auto-binarize a receipt photo before handing it to
+// OCR. Thermal/dot-matrix receipt fonts are low-contrast in a raw photo;
+// pushing them to pure black-on-white is one of the biggest, most
+// well-established accuracy wins for this kind of text.
+function preprocessReceiptImage(file, maxDim = 1800, quality = 0.9) {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const url = URL.createObjectURL(file);
@@ -573,8 +605,26 @@ function resizeImageToBase64(file, maxDim = 1024, quality = 0.8) {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
+
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const d = imageData.data;
+      const grays = new Uint8ClampedArray(d.length / 4);
+      const histogram = new Array(256).fill(0);
+      for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+        const gray = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        grays[p] = gray;
+        histogram[gray | 0]++;
+      }
+      const threshold = otsuThreshold(histogram, grays.length);
+      for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+        const v = grays[p] > threshold ? 255 : 0;
+        d[i] = d[i + 1] = d[i + 2] = v;
+      }
+      ctx.putImageData(imageData, 0, 0);
+
       resolve(canvas.toDataURL("image/jpeg", quality).split(",")[1]);
     };
     img.onerror = (e) => {
@@ -1745,8 +1795,9 @@ function SmartAddModal({ onClose, onParsed }) {
     setError(null);
     let worker;
     try {
-      const base64 = await resizeImageToBase64(file, 1600, 0.85);
+      const base64 = await preprocessReceiptImage(file);
       worker = await createWorker("eng");
+      await worker.setParameters({ tessedit_pageseg_mode: "6" }); // SINGLE_BLOCK: fits a receipt's single narrow column
       const { data } = await worker.recognize(`data:image/jpeg;base64,${base64}`);
       onParsed(parseReceiptOcrText(data.text));
     } catch (e) {
