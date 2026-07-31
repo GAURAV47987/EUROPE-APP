@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* iOS Safari auto-zooms the page on focus if an input's font-size is
+   under 16px. Force form controls to 16px so tapping into any input never
+   triggers that zoom (it also throws off fixed-position modal layout). */
+input, select, textarea {
+  font-size: 16px !important;
+}
+
 :root {
   color-scheme: light;
   --bg: #F6F3EC;
