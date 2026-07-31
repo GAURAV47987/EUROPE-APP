@@ -2488,7 +2488,7 @@ function AskTab() {
         </div>
       )}
 
-      <div className="flex gap-2 sticky bottom-0 pt-2 bg-[var(--bg)]">
+      <div className="flex gap-2 mt-4">
         <input
           placeholder="Ask about the trip…"
           value={question}
