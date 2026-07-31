@@ -2417,6 +2417,7 @@ function AskTab() {
   const [messages, setMessages] = useState([]); // { question, answer? , error? }
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -2494,6 +2495,12 @@ function AskTab() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && ask(question)}
+          onFocus={(e) => {
+            const el = e.target;
+            setInputFocused(true);
+            setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 350);
+          }}
+          onBlur={() => setInputFocused(false)}
           disabled={busy}
           className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none disabled:opacity-60"
         />
@@ -2506,6 +2513,7 @@ function AskTab() {
           <ChevronRight size={18} />
         </button>
       </div>
+      {inputFocused && <div style={{ height: 320 }} aria-hidden="true" />}
     </div>
   );
 }
