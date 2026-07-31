@@ -47,9 +47,14 @@ Vite + React + Tailwind app.
   every surface/text/border token swaps in one place.
 - Tab transitions, a check-off "pop" animation, and hover/press feedback
   throughout — all disabled under `prefers-reduced-motion`.
-- **Split navigation** — the four tools (Itinerary/Budget/Convert/Pack)
-  stay in a fixed, always-visible row; the eight cities live in their own
-  visually distinct scrollable rail underneath.
+- **Icon-grid navigation** — Itinerary, Budget, Convert, Pack, Docs, and
+  Ask sit in a 3×2 grid of colored tiles (matching the budget category
+  palette), replacing the old scrolling pill row now that there are six
+  of them. Tapping a non-Itinerary tile opens a dedicated page with a
+  back-to-Itinerary button and a grid quick-jump popover to reach any
+  other tool in one tap. The eight cities keep their own always-visible,
+  scrollable rail underneath, unchanged — tapping one still swaps content
+  in place rather than opening a separate page.
 - All progress (checklist + budget + cached FX rates + packing list +
   theme) is saved automatically to the browser's `localStorage` — no
   backend required.

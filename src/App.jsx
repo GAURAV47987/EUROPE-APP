@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
-  CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
+  CheckCircle2, Circle, Plus, Trash2, ChevronRight, ChevronLeft, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
   Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye,
-  Camera, MessageCircle
+  Camera, MessageCircle, LayoutGrid
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1290,34 +1290,47 @@ function SyncPanel({ onClose, cloudTripId, tripCode, syncStatus, syncError, onCr
    TAB BAR
 --------------------------------------------------------------- */
 
+const TOOL_DEFS = [
+  { id: "overview", label: "Itinerary", icon: CalendarDays, color: "var(--cat-flights)" },
+  { id: "budget", label: "Budget", icon: Wallet, color: "var(--cat-accommodation)" },
+  { id: "convert", label: "Convert", icon: ArrowLeftRight, color: "var(--cat-food)" },
+  { id: "pack", label: "Pack", icon: Luggage, color: "var(--cat-activities)" },
+  { id: "docs", label: "Docs", icon: FileText, color: "var(--cat-transport)" },
+  { id: "ask", label: "Ask", icon: MessageCircle, color: "var(--cat-shopping)" },
+];
+
 function TabBar({ tab, setTab }) {
-  const primaryTabs = [
-    { id: "overview", label: "Itinerary", icon: CalendarDays },
-    { id: "budget", label: "Budget", icon: Wallet },
-    { id: "convert", label: "Convert", icon: ArrowLeftRight },
-    { id: "pack", label: "Pack", icon: Luggage },
-    { id: "docs", label: "Docs", icon: FileText },
-    { id: "ask", label: "Ask", icon: MessageCircle },
-  ];
+  const isHub = tab === "overview" || CITIES.some((c) => c.id === tab);
+  return isHub ? <HubNav tab={tab} setTab={setTab} /> : <ToolPageHeader tab={tab} setTab={setTab} />;
+}
+
+function HubNav({ tab, setTab }) {
   return (
     <div className="border-b border-[var(--border)]">
-      {/* Tools row — scrolls horizontally if it doesn't fit at narrow widths */}
-      <div className="max-w-3xl mx-auto px-4 pt-1 pb-2 flex gap-1.5 overflow-x-auto scrollbar-thin">
-        {primaryTabs.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-[background-color,color,transform] hover:scale-105 active:scale-95
-                ${active ? "bg-[var(--primary-bg)] text-[var(--primary-text)]" : "bg-[var(--surface)] text-[var(--text-tertiary)] border border-[var(--border)]"}`}
-            >
-              <Icon size={14} className="shrink-0" />
-              {t.label}
-            </button>
-          );
-        })}
+      {/* Tools grid — 3x2, no scrolling needed regardless of item count */}
+      <div className="max-w-3xl mx-auto px-4 pt-3 pb-3">
+        <div className="grid grid-cols-3 gap-2">
+          {TOOL_DEFS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className="flex flex-col items-center justify-center gap-1 rounded-2xl py-3 border transition-transform hover:scale-[1.03] active:scale-95"
+                style={{
+                  background: active ? t.color : "var(--surface)",
+                  borderColor: active ? t.color : "var(--border)",
+                }}
+              >
+                <Icon size={18} color={active ? "#fff" : t.color} />
+                <span className="text-[11px] font-medium" style={{ color: active ? "#fff" : "var(--text-secondary)" }}>
+                  {t.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Cities rail — visually distinct band, its own horizontal scroll */}
@@ -1346,6 +1359,60 @@ function TabBar({ tab, setTab }) {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ToolPageHeader({ tab, setTab }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const def = TOOL_DEFS.find((t) => t.id === tab);
+  if (!def) return null;
+  const Icon = def.icon;
+
+  return (
+    <div className="border-b border-[var(--border)] relative">
+      <div className="max-w-3xl mx-auto px-4 pt-3 pb-3 flex items-center justify-between">
+        <button
+          onClick={() => setTab("overview")}
+          className="flex items-center gap-1 -ml-1 px-1 py-1 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+        >
+          <ChevronLeft size={18} /> Itinerary
+        </button>
+        <div className="flex items-center gap-1.5 font-display text-base font-700" style={{ fontWeight: 700, color: def.color }}>
+          <Icon size={16} /> {def.label}
+        </div>
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Jump to another tool"
+          className="p-1.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:scale-105 active:scale-95 transition-all"
+        >
+          <LayoutGrid size={15} />
+        </button>
+      </div>
+
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+          <div className="absolute right-4 top-14 z-40 bg-[var(--bg)] border border-[var(--border)] rounded-2xl p-2 shadow-lg grid grid-cols-3 gap-1.5 w-52">
+            {TOOL_DEFS.map((t) => {
+              const TIcon = t.icon;
+              const active = t.id === tab;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => { setTab(t.id); setMenuOpen(false); }}
+                  className="flex flex-col items-center gap-1 rounded-xl py-2 hover:bg-[var(--surface)] transition-colors"
+                >
+                  <TIcon size={16} color={active ? t.color : "var(--text-muted)"} />
+                  <span className="text-[10px]" style={{ color: active ? t.color : "var(--text-secondary)" }}>
+                    {t.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
