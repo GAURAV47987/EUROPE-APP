@@ -1604,51 +1604,9 @@ function iconFor(type) {
   return <Circle size={6} className="fill-current" />;
 }
 
-function TripRouteMap() {
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const map = L.map(containerRef.current, { scrollWheelZoom: false });
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(map);
-
-    const points = CITIES.map((c) => CITY_MAP[c.id].center);
-    L.polyline(points, { color: "#20232B", weight: 2, opacity: 0.4, dashArray: "2 8", lineCap: "round" }).addTo(map);
-
-    CITIES.forEach((c, i) => {
-      const icon = L.divIcon({
-        className: "",
-        html: `<div style="width:22px;height:22px;border-radius:50%;background:${c.accent};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;color:white;font:600 11px Inter,sans-serif;">${i + 1}</div>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
-      });
-      L.marker(CITY_MAP[c.id].center, { icon }).addTo(map).bindPopup(`<strong>${i + 1}. ${c.name}</strong><br/>${c.dates}`);
-    });
-
-    // The tab-content mount animation can leave the container at a stale
-    // size for a frame, which throws off fitBounds' zoom calculation (it
-    // can end up zoomed out to the whole continent). Force a resize check
-    // right before fitting once the browser has settled the real layout.
-    requestAnimationFrame(() => {
-      map.invalidateSize();
-      map.fitBounds(L.latLngBounds(points), { padding: [26, 26] });
-    });
-
-    return () => map.remove();
-  }, []);
-
-  return <div ref={containerRef} className="relative isolate w-full h-48 rounded-2xl border border-[var(--border)] overflow-hidden mb-4" />;
-}
-
 function OverviewTab({ checklist, toggleCheck }) {
   return (
     <div>
-      <TripRouteMap />
       <p className="text-sm text-[var(--text-secondary)] mb-5">
         Tap any activity to check it off as you go. Everything's saved automatically.
       </p>

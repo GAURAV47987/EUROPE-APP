@@ -15,10 +15,8 @@ Vite + React + Tailwind app.
   Enter/Space) folds the screen away in 3D (CSS `perspective` +
   `rotateX`) to reveal the app underneath, already rendered so the fold
   uncovers it in real time rather than cutting to a blank page.
-- **Itinerary** — a route-overview mini-map (numbered, city-colored pins
-  connected in trip order) followed by a timeline of day cards, each with
-  a colored rail node and a city-tinted header band; tap any item to check
-  it off.
+- **Itinerary** — a timeline of day cards, each with a colored rail node
+  and a city-tinted header band; tap any item to check it off.
 - **City guides** — per-city weather, currency, tips, must-go highlights,
   things to do/eat, and restaurants. Weather shows a real forecast (via
   Open-Meteo, free/no key) once that city's trip dates fall within the
