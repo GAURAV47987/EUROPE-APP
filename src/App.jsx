@@ -4,13 +4,13 @@ import {
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
   Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye,
-  Mic, Camera
+  Camera
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip,
-  listDocuments, uploadDocument, deleteDocument, getDocumentUrl, parseExpenseText, parseExpenseImage,
+  listDocuments, uploadDocument, deleteDocument, getDocumentUrl, parseExpenseImage,
 } from "./supabase";
 
 /* ---------------------------------------------------------------
@@ -336,6 +336,58 @@ const CITY_MAP = {
 const CATEGORIES = ["Flights", "Accommodation", "Food", "Activities", "Transport", "Shopping", "Other"];
 const CURRENCIES = ["AUD", "EUR", "HUF", "CZK", "USD"];
 const CURRENCY_SYMBOL = { AUD: "$", EUR: "€", HUF: "Ft", CZK: "Kč", USD: "$" };
+
+const EXPENSE_CATEGORY_KEYWORDS = {
+  Flights: ["flight", "airline", "airfare", "boarding"],
+  Accommodation: ["hotel", "hostel", "airbnb", "accommodation", "room", "stay", "check-in", "checkin"],
+  Food: ["food", "lunch", "dinner", "breakfast", "restaurant", "cafe", "café", "coffee", "snack", "meal", "taverna", "drinks", "bar", "brunch"],
+  Transport: ["taxi", "uber", "train", "bus", "tram", "metro", "ferry", "fuel", "petrol", "parking", "transport", "transfer"],
+  Activities: ["museum", "tour", "ticket", "activity", "entrance", "attraction", "show", "cruise", "excursion"],
+  Shopping: ["shop", "souvenir", "shopping", "market", "store", "clothes", "gift"],
+};
+
+const EXPENSE_CURRENCY_HINTS = [
+  { re: /\busd\b|us dollars?|american dollars?/i, currency: "USD" },
+  { re: /\baud\b|australian dollars?/i, currency: "AUD" },
+  { re: /€|\beur\b|euros?/i, currency: "EUR" },
+  { re: /\bhuf\b|forints?/i, currency: "HUF" },
+  { re: /\bczk\b|korunas?|crowns?/i, currency: "CZK" },
+  { re: /\$/, currency: "AUD" },
+];
+
+const EXPENSE_CITY_HINTS = [
+  { re: /athens/i, id: "athens" },
+  { re: /\bios\b/i, id: "ios" },
+  { re: /paros/i, id: "paros" },
+  { re: /budapest/i, id: "budapest" },
+  { re: /prague/i, id: "prague" },
+  { re: /(cesky|český)?\s*krumlov/i, id: "krumlov" },
+  { re: /hallstatt/i, id: "hallstatt" },
+  { re: /vienna/i, id: "vienna" },
+];
+
+function parseExpenseLocal(text) {
+  const amountMatch = text.match(/\d+(?:[.,]\d+)?/);
+  const amount = amountMatch ? parseFloat(amountMatch[0].replace(",", ".")) : 0;
+
+  let currency = "AUD";
+  for (const hint of EXPENSE_CURRENCY_HINTS) {
+    if (hint.re.test(text)) { currency = hint.currency; break; }
+  }
+
+  let category = "Other";
+  const lower = text.toLowerCase();
+  for (const [cat, keywords] of Object.entries(EXPENSE_CATEGORY_KEYWORDS)) {
+    if (keywords.some((k) => lower.includes(k))) { category = cat; break; }
+  }
+
+  let city = "";
+  for (const hint of EXPENSE_CITY_HINTS) {
+    if (hint.re.test(text)) { city = hint.id; break; }
+  }
+
+  return { description: text.trim(), amount, currency, category, city };
+}
 const CATEGORY_COLOR_VAR = {
   Flights: "var(--cat-flights)",
   Accommodation: "var(--cat-accommodation)",
@@ -1636,18 +1688,9 @@ function SmartAddModal({ onClose, onParsed }) {
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleParseText = async () => {
-    if (!text.trim() || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const parsed = await parseExpenseText(text.trim());
-      onParsed(parsed);
-    } catch (e) {
-      setError(e?.message || String(e));
-    } finally {
-      setBusy(false);
-    }
+  const handleParseText = () => {
+    if (!text.trim()) return;
+    onParsed(parseExpenseLocal(text.trim()));
   };
 
   const handlePhoto = async (e) => {
@@ -1681,7 +1724,8 @@ function SmartAddModal({ onClose, onParsed }) {
         </div>
 
         <p className="text-xs text-[var(--text-muted)]">
-          Type it, or tap the mic on your keyboard to speak it — then we'll fill in the details for you to confirm.
+          Type it, or tap the mic on your keyboard to speak it — we'll pick out the amount and category instantly, no
+          internet needed.
         </p>
 
         <div className="flex gap-2">
@@ -1691,16 +1735,15 @@ function SmartAddModal({ onClose, onParsed }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleParseText()}
-            disabled={busy}
-            className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none disabled:opacity-60"
+            className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none"
           />
           <button
             onClick={handleParseText}
-            disabled={busy || !text.trim()}
-            aria-label="Parse text"
+            disabled={!text.trim()}
+            aria-label="Use this text"
             className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg px-3 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-transform"
           >
-            <Mic size={16} />
+            <ChevronRight size={18} />
           </button>
         </div>
 
@@ -1723,6 +1766,7 @@ function SmartAddModal({ onClose, onParsed }) {
         >
           <Camera size={16} /> Scan receipt
         </button>
+        <p className="text-[11px] text-[var(--text-muted)] text-center">Scanning a receipt uses AI and needs a connection.</p>
 
         {busy && <p className="text-xs text-[var(--text-muted)] text-center">Reading…</p>}
         {error && <p className="text-xs text-[#c9463f] font-mono">{error}</p>}

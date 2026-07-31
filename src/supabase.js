@@ -126,10 +126,6 @@ async function invokeParseExpense(body) {
   return data;
 }
 
-export async function parseExpenseText(text) {
-  return invokeParseExpense({ mode: "text", text });
-}
-
 export async function parseExpenseImage(imageBase64, mimeType) {
   return invokeParseExpense({ mode: "image", imageBase64, mimeType });
 }
