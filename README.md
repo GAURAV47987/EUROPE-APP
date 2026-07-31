@@ -59,6 +59,13 @@ Vite + React + Tailwind app.
   server-side, not just by keeping the code secret. Falls back to the
   local cache if the cloud is unreachable. See `src/supabase.js` and
   the schema/RLS/RPC setup in the project's Supabase SQL Editor history.
+- **Smart add (budget)** — type or speak (via your keyboard's built-in
+  dictation mic) a quick note like "40 euros lunch in Athens", or snap a
+  photo of a receipt, and it's parsed into a description, amount,
+  currency, category, and city — pre-filled into the expense form for a
+  one-tap confirm instead of manual typing. Powered by a Supabase Edge
+  Function calling Google's Gemini API (free tier). See
+  `supabase/functions/parse-expense`.
 - **Documents** — upload tickets, passport scans, and booking
   confirmations (images or PDFs, up to 20MB) once paired via sync; view
   or delete them from either synced device. Stored in a private Supabase

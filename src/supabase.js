@@ -109,3 +109,27 @@ export async function getDocumentUrl(tripId, filename) {
   if (error) throw error;
   return data.signedUrl;
 }
+
+async function friendlyFunctionError(error) {
+  try {
+    const body = await error?.context?.json();
+    if (body?.error) return new Error(body.error);
+  } catch (e) {}
+  return error;
+}
+
+async function invokeParseExpense(body) {
+  await ensureSignedIn();
+  const { data, error } = await supabase.functions.invoke("parse-expense", { body });
+  if (error) throw await friendlyFunctionError(error);
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function parseExpenseText(text) {
+  return invokeParseExpense({ mode: "text", text });
+}
+
+export async function parseExpenseImage(imageBase64, mimeType) {
+  return invokeParseExpense({ mode: "image", imageBase64, mimeType });
+}

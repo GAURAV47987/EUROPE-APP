@@ -3,13 +3,14 @@ import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
-  Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye
+  Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye,
+  Mic, Camera
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip,
-  listDocuments, uploadDocument, deleteDocument, getDocumentUrl,
+  listDocuments, uploadDocument, deleteDocument, getDocumentUrl, parseExpenseText, parseExpenseImage,
 } from "./supabase";
 
 /* ---------------------------------------------------------------
@@ -456,6 +457,36 @@ function loadFromStorage(key) {
 
 function saveToStorage(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
+}
+
+function resizeImageToBase64(file, maxDim = 1024, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", quality).split(",")[1]);
+    };
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      reject(e);
+    };
+    img.src = url;
+  });
 }
 
 /* ---------------------------------------------------------------
@@ -1596,14 +1627,132 @@ function Section({ icon, title, children, accent }) {
 }
 
 /* ---------------------------------------------------------------
+   SMART ADD (voice / receipt scan, AI-parsed)
+--------------------------------------------------------------- */
+
+function SmartAddModal({ onClose, onParsed }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleParseText = async () => {
+    if (!text.trim() || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const parsed = await parseExpenseText(text.trim());
+      onParsed(parsed);
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const base64 = await resizeImageToBase64(file);
+      const parsed = await parseExpenseImage(base64, "image/jpeg");
+      onParsed(parsed);
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50 modal-backdrop" onClick={onClose}>
+      <div
+        className="bg-[var(--bg)] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 space-y-3 modal-panel"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <span className="font-display font-700 text-lg" style={{ fontWeight: 700 }}>Smart add</span>
+          <button onClick={onClose} className="hover:scale-110 active:scale-90 transition-transform text-[var(--text-tertiary)]">
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className="text-xs text-[var(--text-muted)]">
+          Type it, or tap the mic on your keyboard to speak it — then we'll fill in the details for you to confirm.
+        </p>
+
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            placeholder="e.g. 40 euros lunch in Athens"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleParseText()}
+            disabled={busy}
+            className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none disabled:opacity-60"
+          />
+          <button
+            onClick={handleParseText}
+            disabled={busy || !text.trim()}
+            aria-label="Parse text"
+            className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg px-3 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+          >
+            <Mic size={16} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+          <div className="flex-1 h-px bg-[var(--border)]" /> OR <div className="flex-1 h-px bg-[var(--border)]" />
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhoto}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={busy}
+          className="w-full flex items-center justify-center gap-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg py-2.5 text-sm font-medium disabled:opacity-60 hover:scale-[1.01] active:scale-[0.99] transition-transform"
+        >
+          <Camera size={16} /> Scan receipt
+        </button>
+
+        {busy && <p className="text-xs text-[var(--text-muted)] text-center">Reading…</p>}
+        {error && <p className="text-xs text-[#c9463f] font-mono">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
    BUDGET TAB
 --------------------------------------------------------------- */
 
 function BudgetTab({ budget, addExpense, removeExpense }) {
   const [showForm, setShowForm] = useState(false);
+  const [smartOpen, setSmartOpen] = useState(false);
   const [form, setForm] = useState({
     description: "", amount: "", currency: "AUD", category: "Activities", city: "",
   });
+
+  const applyParsed = (parsed) => {
+    setForm({
+      description: parsed.description || "",
+      amount: parsed.amount ? String(parsed.amount) : "",
+      currency: parsed.currency || "AUD",
+      category: parsed.category || "Activities",
+      city: parsed.city || "",
+    });
+    setSmartOpen(false);
+    setShowForm(true);
+  };
 
   const totals = useMemo(() => {
     const t = {};
@@ -1684,12 +1833,21 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
       )}
 
       <button
+        onClick={() => setSmartOpen(true)}
+        className="w-full flex items-center justify-center gap-2 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl py-3 text-sm font-medium mb-2 hover:scale-[1.01] active:scale-[0.99] transition-transform"
+      >
+        <Sparkles size={16} /> Smart add — speak or scan a receipt
+      </button>
+
+      <button
         onClick={() => setShowForm(true)}
         className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-4 text-base font-bold mb-5 shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-transform"
         style={{ background: "linear-gradient(135deg, #E0703C, #C9463F)", boxShadow: "0 4px 14px rgba(224,112,60,0.5)" }}
       >
         <Plus size={20} strokeWidth={3} /> ADD EXPENSE
       </button>
+
+      {smartOpen && <SmartAddModal onClose={() => setSmartOpen(false)} onParsed={applyParsed} />}
 
       <div className="space-y-2">
         {[...budget].reverse().map((e) => (
