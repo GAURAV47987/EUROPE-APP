@@ -4,14 +4,13 @@ import {
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
   Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye,
-  Camera
+  Camera, MessageCircle
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { createWorker } from "tesseract.js";
 import {
   getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip,
-  listDocuments, uploadDocument, deleteDocument, getDocumentUrl,
+  listDocuments, uploadDocument, deleteDocument, getDocumentUrl, parseReceiptWithGroq, askTripQuestion,
 } from "./supabase";
 
 /* ---------------------------------------------------------------
@@ -401,37 +400,6 @@ function parseExpenseLocal(text) {
   };
 }
 
-function parseReceiptOcrText(rawText) {
-  const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
-  const moneyRe = /\d+[.,]\d{2}\b/g;
-
-  let amount = 0;
-  const totalLine = lines.find((l) => /\bgrand total\b/i.test(l))
-    || lines.find((l) => /\btotal\b/i.test(l) && !/\bsub\s*total\b/i.test(l));
-  if (totalLine) {
-    const matches = totalLine.match(moneyRe);
-    if (matches) amount = parseFloat(matches[matches.length - 1].replace(",", "."));
-  }
-  if (!amount) {
-    const allMatches = rawText.match(moneyRe);
-    if (allMatches) {
-      amount = Math.max(...allMatches.map((m) => parseFloat(m.replace(",", "."))));
-    } else {
-      const plainNumbers = rawText.match(/\d+(?:[.,]\d+)?/g);
-      if (plainNumbers) amount = Math.max(...plainNumbers.map((m) => parseFloat(m.replace(",", "."))));
-    }
-  }
-
-  const description = lines.find((l) => l.length >= 3 && !/^\d+([.,]\d+)?$/.test(l)) || "Receipt";
-
-  return {
-    description: description.slice(0, 120),
-    amount: amount || 0,
-    currency: detectCurrency(rawText),
-    category: detectCategory(rawText),
-    city: detectCity(rawText),
-  };
-}
 const CATEGORY_COLOR_VAR = {
   Flights: "var(--cat-flights)",
   Accommodation: "var(--cat-accommodation)",
@@ -555,39 +523,7 @@ function saveToStorage(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
-// Otsu's method: picks the grayscale threshold that best splits a bimodal
-// histogram (receipt ink vs. paper) into two classes, maximizing the
-// variance between them. Far more robust across lighting/exposure than a
-// fixed cutoff.
-function otsuThreshold(histogram, totalPixels) {
-  let sum = 0;
-  for (let t = 0; t < 256; t++) sum += t * histogram[t];
-  let sumB = 0;
-  let weightB = 0;
-  let maxVariance = 0;
-  let threshold = 127;
-  for (let t = 0; t < 256; t++) {
-    weightB += histogram[t];
-    if (weightB === 0) continue;
-    const weightF = totalPixels - weightB;
-    if (weightF === 0) break;
-    sumB += t * histogram[t];
-    const meanB = sumB / weightB;
-    const meanF = (sum - sumB) / weightF;
-    const variance = weightB * weightF * (meanB - meanF) * (meanB - meanF);
-    if (variance > maxVariance) {
-      maxVariance = variance;
-      threshold = t;
-    }
-  }
-  return threshold;
-}
-
-// Resize + grayscale + auto-binarize a receipt photo before handing it to
-// OCR. Thermal/dot-matrix receipt fonts are low-contrast in a raw photo;
-// pushing them to pure black-on-white is one of the biggest, most
-// well-established accuracy wins for this kind of text.
-function preprocessReceiptImage(file, maxDim = 1800, quality = 0.9) {
+function resizeImageToBase64(file, maxDim = 1600, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const url = URL.createObjectURL(file);
@@ -605,26 +541,8 @@ function preprocessReceiptImage(file, maxDim = 1800, quality = 0.9) {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, width, height);
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
-
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const d = imageData.data;
-      const grays = new Uint8ClampedArray(d.length / 4);
-      const histogram = new Array(256).fill(0);
-      for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-        const gray = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-        grays[p] = gray;
-        histogram[gray | 0]++;
-      }
-      const threshold = otsuThreshold(histogram, grays.length);
-      for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-        const v = grays[p] > threshold ? 255 : 0;
-        d[i] = d[i + 1] = d[i + 2] = v;
-      }
-      ctx.putImageData(imageData, 0, 0);
-
       resolve(canvas.toDataURL("image/jpeg", quality).split(",")[1]);
     };
     img.onerror = (e) => {
@@ -866,6 +784,7 @@ export default function App() {
               {tab === "docs" && (
                 <DocsTab cloudTripId={cloudTripId} onOpenSync={() => setSyncPanelOpen(true)} />
               )}
+              {tab === "ask" && <AskTab />}
               {activeCity && (
                 <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
               )}
@@ -1363,11 +1282,12 @@ function TabBar({ tab, setTab }) {
     { id: "convert", label: "Convert", icon: ArrowLeftRight },
     { id: "pack", label: "Pack", icon: Luggage },
     { id: "docs", label: "Docs", icon: FileText },
+    { id: "ask", label: "Ask", icon: MessageCircle },
   ];
   return (
     <div className="border-b border-[var(--border)]">
-      {/* Tools row — fixed, always fully visible, no scrolling */}
-      <div className="max-w-3xl mx-auto px-4 pt-1 pb-2 flex gap-1.5">
+      {/* Tools row — scrolls horizontally if it doesn't fit at narrow widths */}
+      <div className="max-w-3xl mx-auto px-4 pt-1 pb-2 flex gap-1.5 overflow-x-auto scrollbar-thin">
         {primaryTabs.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
@@ -1375,7 +1295,7 @@ function TabBar({ tab, setTab }) {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-[background-color,color,transform] hover:scale-105 active:scale-95
+              className={`shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-[background-color,color,transform] hover:scale-105 active:scale-95
                 ${active ? "bg-[var(--primary-bg)] text-[var(--primary-text)]" : "bg-[var(--surface)] text-[var(--text-tertiary)] border border-[var(--border)]"}`}
             >
               <Icon size={14} className="shrink-0" />
@@ -1793,17 +1713,13 @@ function SmartAddModal({ onClose, onParsed }) {
     if (!file) return;
     setBusy(true);
     setError(null);
-    let worker;
     try {
-      const base64 = await preprocessReceiptImage(file);
-      worker = await createWorker("eng");
-      await worker.setParameters({ tessedit_pageseg_mode: "6" }); // SINGLE_BLOCK: fits a receipt's single narrow column
-      const { data } = await worker.recognize(`data:image/jpeg;base64,${base64}`);
-      onParsed(parseReceiptOcrText(data.text));
+      const base64 = await resizeImageToBase64(file);
+      const parsed = await parseReceiptWithGroq(base64, "image/jpeg");
+      onParsed(parsed);
     } catch (e) {
       setError(e?.message || String(e));
     } finally {
-      if (worker) await worker.terminate().catch(() => {});
       setBusy(false);
     }
   };
@@ -1864,7 +1780,7 @@ function SmartAddModal({ onClose, onParsed }) {
           <Camera size={16} /> Scan receipt
         </button>
         <p className="text-[11px] text-[var(--text-muted)] text-center">
-          Reads the receipt on your phone — first scan needs a connection to download the reader (~10MB), after that it works offline too.
+          Scanning a receipt uses AI and needs a connection.
         </p>
 
         {busy && <p className="text-xs text-[var(--text-muted)] text-center">Reading…</p>}
@@ -2483,6 +2399,113 @@ function DocsTab({ cloudTripId, onOpenSync }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   ASK (trip Q&A via Groq)
+--------------------------------------------------------------- */
+
+const ASK_EXAMPLES = [
+  "Best restaurants in Budapest?",
+  "What should we do on a rainy day in Vienna?",
+  "Any day trips from Prague worth it?",
+];
+
+function AskTab() {
+  const [messages, setMessages] = useState([]); // { question, answer? , error? }
+  const [question, setQuestion] = useState("");
+  const [busy, setBusy] = useState(false);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, busy]);
+
+  const ask = async (q) => {
+    const text = q.trim();
+    if (!text || busy) return;
+    setQuestion("");
+    setBusy(true);
+    setMessages((prev) => [...prev, { question: text }]);
+    try {
+      const answer = await askTripQuestion(text);
+      setMessages((prev) => prev.map((m, i) => (i === prev.length - 1 ? { ...m, answer } : m)));
+    } catch (e) {
+      setMessages((prev) =>
+        prev.map((m, i) => (i === prev.length - 1 ? { ...m, error: e?.message || String(e) } : m))
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col" style={{ minHeight: "60vh" }}>
+      {messages.length === 0 ? (
+        <div className="text-center py-8">
+          <MessageCircle size={32} className="mx-auto text-[var(--text-muted)] mb-3" />
+          <p className="text-sm text-[var(--text-secondary)] mb-5 max-w-xs mx-auto">
+            Ask anything about the trip — restaurants, things to do, day trips. Powered by AI, aware of your route
+            and dates.
+          </p>
+          <div className="flex flex-col gap-2 max-w-xs mx-auto">
+            {ASK_EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                onClick={() => ask(ex)}
+                className="text-left text-sm bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 hover:scale-[1.01] active:scale-[0.99] transition-transform"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 space-y-4 mb-4">
+          {messages.map((m, i) => (
+            <div key={i}>
+              <div className="flex justify-end mb-1.5">
+                <div className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-2xl rounded-br-sm px-3.5 py-2 text-sm max-w-[85%]">
+                  {m.question}
+                </div>
+              </div>
+              <div className="flex justify-start">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl rounded-bl-sm px-3.5 py-2 text-sm max-w-[85%] whitespace-pre-wrap">
+                  {m.answer ? (
+                    m.answer
+                  ) : m.error ? (
+                    <span className="text-[#c9463f] font-mono text-xs">{m.error}</span>
+                  ) : (
+                    <span className="text-[var(--text-muted)]">Thinking…</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+          <div ref={scrollRef} />
+        </div>
+      )}
+
+      <div className="flex gap-2 sticky bottom-0 pt-2 bg-[var(--bg)]">
+        <input
+          placeholder="Ask about the trip…"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && ask(question)}
+          disabled={busy}
+          className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none disabled:opacity-60"
+        />
+        <button
+          onClick={() => ask(question)}
+          disabled={busy || !question.trim()}
+          aria-label="Ask"
+          className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg px-3 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -110,3 +110,28 @@ export async function getDocumentUrl(tripId, filename) {
   return data.signedUrl;
 }
 
+async function friendlyFunctionError(error) {
+  try {
+    const body = await error?.context?.json();
+    if (body?.error) return new Error(body.error);
+  } catch (e) {}
+  return error;
+}
+
+async function invokeGroqAssist(body) {
+  await ensureSignedIn();
+  const { data, error } = await supabase.functions.invoke("groq-assist", { body });
+  if (error) throw await friendlyFunctionError(error);
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function parseReceiptWithGroq(imageBase64, mimeType) {
+  return invokeGroqAssist({ mode: "receipt", imageBase64, mimeType });
+}
+
+export async function askTripQuestion(question) {
+  const data = await invokeGroqAssist({ mode: "ask", question });
+  return data.answer;
+}
+
