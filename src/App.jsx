@@ -2432,47 +2432,11 @@ function AskTab() {
   const [messages, setMessages] = useState([]); // { question, answer? , error? }
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
-  const [keyboardGap, setKeyboardGap] = useState(0);
   const scrollRef = useRef(null);
-  const inputRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, busy]);
-
-  // iOS doesn't shrink the layout viewport for the on-screen keyboard, so
-  // scrollIntoView() thinks the input is already visible even when the
-  // keyboard is covering it. window.visualViewport reports the *actual*
-  // visible area, so we measure the real gap and scroll by that amount
-  // ourselves rather than trusting the browser's own visibility check.
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const handleResize = () => {
-      const obscured = window.innerHeight - vv.height - vv.offsetTop;
-      setKeyboardGap(Math.max(0, obscured));
-    };
-    vv.addEventListener("resize", handleResize);
-    vv.addEventListener("scroll", handleResize);
-    handleResize();
-    return () => {
-      vv.removeEventListener("resize", handleResize);
-      vv.removeEventListener("scroll", handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!inputFocused || keyboardGap <= 0) return;
-    const el = inputRef.current;
-    if (!el) return;
-    const vv = window.visualViewport;
-    const visibleBottom = vv ? vv.height + vv.offsetTop : window.innerHeight - keyboardGap;
-    const rect = el.getBoundingClientRect();
-    if (rect.bottom > visibleBottom) {
-      window.scrollBy({ top: rect.bottom - visibleBottom + 16, behavior: "smooth" });
-    }
-  }, [inputFocused, keyboardGap]);
 
   const ask = async (q) => {
     const text = q.trim();
@@ -2493,7 +2457,7 @@ function AskTab() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pb-20">
       {messages.length === 0 ? (
         <div className="text-center py-8">
           <MessageCircle size={32} className="mx-auto text-[var(--text-muted)] mb-3" />
@@ -2539,28 +2503,29 @@ function AskTab() {
         </div>
       )}
 
-      <div className="flex gap-2 mt-4">
-        <input
-          ref={inputRef}
-          placeholder="Ask about the trip…"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && ask(question)}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-          disabled={busy}
-          className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none disabled:opacity-60"
-        />
-        <button
-          onClick={() => ask(question)}
-          disabled={busy || !question.trim()}
-          aria-label="Ask"
-          className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg px-3 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-        >
-          <ChevronRight size={18} />
-        </button>
+      {/* Fixed to the viewport bottom, same proven pattern as the New
+          expense / Smart add modals — not sitting in normal page flow,
+          so mobile browsers position it above the keyboard correctly. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 bg-[var(--bg)] border-t border-[var(--border)] px-4 py-3">
+        <div className="max-w-3xl mx-auto flex gap-2">
+          <input
+            placeholder="Ask about the trip…"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && ask(question)}
+            disabled={busy}
+            className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none disabled:opacity-60"
+          />
+          <button
+            onClick={() => ask(question)}
+            disabled={busy || !question.trim()}
+            aria-label="Ask"
+            className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg px-3 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
       </div>
-      {inputFocused && keyboardGap > 0 && <div style={{ height: keyboardGap }} aria-hidden="true" />}
     </div>
   );
 }
