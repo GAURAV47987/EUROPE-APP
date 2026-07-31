@@ -59,6 +59,12 @@ Vite + React + Tailwind app.
   server-side, not just by keeping the code secret. Falls back to the
   local cache if the cloud is unreachable. See `src/supabase.js` and
   the schema/RLS/RPC setup in the project's Supabase SQL Editor history.
+- **Documents** — upload tickets, passport scans, and booking
+  confirmations (images or PDFs, up to 20MB) once paired via sync; view
+  or delete them from either synced device. Stored in a private Supabase
+  Storage bucket with the same membership-gated Row Level Security as the
+  budget/checklist sync, so only devices that joined the trip can reach
+  its files — never a public link.
 - **Installable (PWA)** — "Add to Home Screen" on iOS/Android for a real
   home-screen icon that opens full-screen, no browser chrome. A service
   worker (via `vite-plugin-pwa`) precaches the app shell on first visit,

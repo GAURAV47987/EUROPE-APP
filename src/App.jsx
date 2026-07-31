@@ -3,11 +3,14 @@ import {
   Plane, MapPin, Wallet, CalendarDays, UtensilsCrossed, Star,
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
-  Sun, Moon, Link2, CloudCheck, CloudAlert
+  Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip } from "./supabase";
+import {
+  getStoredTripId, clearStoredTripId, createSharedTrip, joinSharedTrip, fetchSharedTrip, updateSharedTrip,
+  listDocuments, uploadDocument, deleteDocument, getDocumentUrl,
+} from "./supabase";
 
 /* ---------------------------------------------------------------
    TRIP DATA
@@ -681,6 +684,9 @@ export default function App() {
               )}
               {tab === "convert" && <ConverterTab />}
               {tab === "pack" && <PackingTab checklist={checklist} toggleCheck={toggleCheck} />}
+              {tab === "docs" && (
+                <DocsTab cloudTripId={cloudTripId} onOpenSync={() => setSyncPanelOpen(true)} />
+              )}
               {activeCity && (
                 <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
               )}
@@ -1177,6 +1183,7 @@ function TabBar({ tab, setTab }) {
     { id: "budget", label: "Budget", icon: Wallet },
     { id: "convert", label: "Convert", icon: ArrowLeftRight },
     { id: "pack", label: "Pack", icon: Luggage },
+    { id: "docs", label: "Docs", icon: FileText },
   ];
   return (
     <div className="border-b border-[var(--border)]">
@@ -2010,6 +2017,170 @@ function PackingTab({ checklist, toggleCheck }) {
           </div>
         </Section>
       ))}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   DOCUMENTS TAB
+--------------------------------------------------------------- */
+
+const MAX_DOC_SIZE = 20 * 1024 * 1024; // 20MB
+
+function DocsTab({ cloudTripId, onOpenSync }) {
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const refresh = useCallback(async () => {
+    if (!cloudTripId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await listDocuments(cloudTripId);
+      setDocs(list);
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [cloudTripId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_DOC_SIZE) {
+      setError("That file is over 20MB — try a smaller scan or photo.");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      await uploadDocument(cloudTripId, file);
+      await refresh();
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleView = async (filename) => {
+    try {
+      const url = await getDocumentUrl(cloudTripId, filename);
+      window.open(url, "_blank", "noopener");
+    } catch (e) {
+      setError(e?.message || String(e));
+    }
+  };
+
+  const handleDelete = async (filename) => {
+    try {
+      await deleteDocument(cloudTripId, filename);
+      setDocs((prev) => prev.filter((d) => d.name !== filename));
+    } catch (e) {
+      setError(e?.message || String(e));
+    }
+  };
+
+  if (!cloudTripId) {
+    return (
+      <div className="text-center py-10">
+        <FileText size={32} className="mx-auto text-[var(--text-muted)] mb-3" />
+        <p className="text-sm text-[var(--text-secondary)] mb-4 max-w-xs mx-auto">
+          Documents live in your shared trip, so everyone paired with you can see them. Set up sync first to use
+          this.
+        </p>
+        <button
+          onClick={onOpenSync}
+          className="bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg px-4 py-2.5 text-sm font-medium hover:scale-[1.02] active:scale-[0.98] transition-transform"
+        >
+          Set up sync
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-[var(--text-secondary)] mb-5">
+        Tickets, passport scans, booking confirmations — stored securely and visible to everyone synced to this
+        trip.
+      </p>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*,application/pdf"
+      />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="w-full flex items-center justify-center gap-2 bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-xl py-4 text-base font-bold mb-5 hover:scale-[1.01] active:scale-[0.99] transition-transform disabled:opacity-60"
+      >
+        <Upload size={18} /> {uploading ? "Uploading…" : "Upload document"}
+      </button>
+
+      {error && <p className="text-xs text-[#c9463f] font-mono mb-4">{error}</p>}
+
+      {loading ? (
+        <p className="text-sm text-[var(--text-muted)] text-center py-6">Loading…</p>
+      ) : docs.length === 0 ? (
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--text-muted)] text-center">
+          No documents yet
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {docs.map((doc) => {
+            const isImage = /\.(png|jpe?g|gif|webp|heic)$/i.test(doc.name);
+            const displayName = doc.name.replace(/^\d+_/, "");
+            const sizeKb = doc.metadata?.size ? Math.round(doc.metadata.size / 1024) : null;
+            return (
+              <div
+                key={doc.name}
+                className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-3 py-2.5 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {isImage ? (
+                    <Image size={18} className="text-[var(--text-muted)] shrink-0" />
+                  ) : (
+                    <FileText size={18} className="text-[var(--text-muted)] shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-[var(--text-primary)] truncate">{displayName}</div>
+                    {sizeKb != null && <div className="text-[11px] text-[var(--text-muted)] font-mono">{sizeKb} KB</div>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => handleView(doc.name)}
+                    aria-label={`View ${displayName}`}
+                    className="text-[var(--text-tertiary)] hover:scale-110 active:scale-90 transition-transform"
+                  >
+                    <Eye size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(doc.name)}
+                    aria-label={`Delete ${displayName}`}
+                    className="text-[#c9463f] hover:scale-110 active:scale-90 transition-transform"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

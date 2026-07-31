@@ -74,3 +74,38 @@ export async function updateSharedTrip(id, { budget, checklist }) {
   const { error } = await supabase.from("trips").update(payload).eq("id", id);
   if (error) throw error;
 }
+
+const DOCS_BUCKET = "trip-documents";
+
+export async function listDocuments(tripId) {
+  await ensureSignedIn();
+  const { data, error } = await supabase.storage.from(DOCS_BUCKET).list(tripId, {
+    sortBy: { column: "created_at", order: "desc" },
+  });
+  if (error) throw error;
+  return (data || []).filter((f) => f.name !== ".emptyFolderPlaceholder");
+}
+
+export async function uploadDocument(tripId, file) {
+  await ensureSignedIn();
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const path = `${tripId}/${Date.now()}_${safeName}`;
+  const { error } = await supabase.storage.from(DOCS_BUCKET).upload(path, file, { upsert: false });
+  if (error) throw error;
+  return path;
+}
+
+export async function deleteDocument(tripId, filename) {
+  await ensureSignedIn();
+  const { error } = await supabase.storage.from(DOCS_BUCKET).remove([`${tripId}/${filename}`]);
+  if (error) throw error;
+}
+
+export async function getDocumentUrl(tripId, filename) {
+  await ensureSignedIn();
+  const { data, error } = await supabase.storage
+    .from(DOCS_BUCKET)
+    .createSignedUrl(`${tripId}/${filename}`, 60 * 60);
+  if (error) throw error;
+  return data.signedUrl;
+}
