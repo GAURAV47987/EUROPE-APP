@@ -21,14 +21,14 @@ import { refreshApp } from "./pwa.js";
 const TRIP_YEAR = 2026;
 
 const CITIES = [
-  { id: "athens", name: "Athens", country: "Greece", accent: "#2C5F7C", dates: "Aug 24 – 27", currency: "Euro (EUR)", weather: "~30–32°C, sunny & dry", weatherNote: "Peak summer heat — mornings for sightseeing, siesta midday" },
-  { id: "ios", name: "Ios", country: "Greece", accent: "#E0703C", dates: "Aug 27 – 30", currency: "Euro (EUR)", weather: "~27–29°C, sunny, sea breeze", weatherNote: "Warm island evenings, light layer for boat rides" },
-  { id: "paros", name: "Paros", country: "Greece", accent: "#2F8577", dates: "Aug 30 – Sep 2", currency: "Euro (EUR)", weather: "~26–28°C, sunny, can be breezy", weatherNote: "Meltemi winds possible early Sept — can affect ferries" },
-  { id: "budapest", name: "Budapest", country: "Hungary", accent: "#9C3B3B", dates: "Sep 2 – 6", currency: "Hungarian Forint (HUF)", weather: "~22–25°C, mild, chance of rain", weatherNote: "Pack a light jacket for evenings" },
-  { id: "prague", name: "Prague", country: "Czechia", accent: "#B4842A", dates: "Sep 6 – 9", currency: "Czech Koruna (CZK)", weather: "~18–22°C, mild, cooler evenings", weatherNote: "Layer up — mornings and nights get cool" },
-  { id: "krumlov", name: "Český Krumlov", country: "Czechia", accent: "#4C6B44", dates: "Sep 9 – 10", currency: "Czech Koruna (CZK)", weather: "~16–20°C, mild, alpine air", weatherNote: "Comfortable shoes essential — cobblestones everywhere" },
-  { id: "hallstatt", name: "Hallstatt", country: "Austria", accent: "#3F638F", dates: "Sep 10 – 11", currency: "Euro (EUR)", weather: "~14–18°C, cool, alpine, chance of rain", weatherNote: "Bring a proper jacket — lakeside can be chilly" },
-  { id: "vienna", name: "Vienna", country: "Austria", accent: "#6B4A70", dates: "Sep 11 – 15", currency: "Euro (EUR)", weather: "~18–21°C, mild, some rain possible", weatherNote: "Light jacket for evenings, umbrella just in case" },
+  { id: "athens", name: "Athens", country: "Greece", accent: "#2C5F7C", dates: "Aug 24 – 27", currency: "Euro (EUR)", weather: "~30–32°C, sunny & dry", weatherNote: "Peak summer heat — mornings for sightseeing, siesta midday", lat: 37.9838, lng: 23.7275 },
+  { id: "ios", name: "Ios", country: "Greece", accent: "#E0703C", dates: "Aug 27 – 30", currency: "Euro (EUR)", weather: "~27–29°C, sunny, sea breeze", weatherNote: "Warm island evenings, light layer for boat rides", lat: 36.7231, lng: 25.2802 },
+  { id: "paros", name: "Paros", country: "Greece", accent: "#2F8577", dates: "Aug 30 – Sep 2", currency: "Euro (EUR)", weather: "~26–28°C, sunny, can be breezy", weatherNote: "Meltemi winds possible early Sept — can affect ferries", lat: 37.0856, lng: 25.1488 },
+  { id: "budapest", name: "Budapest", country: "Hungary", accent: "#9C3B3B", dates: "Sep 2 – 6", currency: "Hungarian Forint (HUF)", weather: "~22–25°C, mild, chance of rain", weatherNote: "Pack a light jacket for evenings", lat: 47.4979, lng: 19.0402 },
+  { id: "prague", name: "Prague", country: "Czechia", accent: "#B4842A", dates: "Sep 6 – 9", currency: "Czech Koruna (CZK)", weather: "~18–22°C, mild, cooler evenings", weatherNote: "Layer up — mornings and nights get cool", lat: 50.0755, lng: 14.4378 },
+  { id: "krumlov", name: "Český Krumlov", country: "Czechia", accent: "#4C6B44", dates: "Sep 9 – 10", currency: "Czech Koruna (CZK)", weather: "~16–20°C, mild, alpine air", weatherNote: "Comfortable shoes essential — cobblestones everywhere", lat: 48.8127, lng: 14.3175 },
+  { id: "hallstatt", name: "Hallstatt", country: "Austria", accent: "#3F638F", dates: "Sep 10 – 11", currency: "Euro (EUR)", weather: "~14–18°C, cool, alpine, chance of rain", weatherNote: "Bring a proper jacket — lakeside can be chilly", lat: 47.5622, lng: 13.6493 },
+  { id: "vienna", name: "Vienna", country: "Austria", accent: "#6B4A70", dates: "Sep 11 – 15", currency: "Euro (EUR)", weather: "~18–21°C, mild, some rain possible", weatherNote: "Light jacket for evenings, umbrella just in case", lat: 48.2082, lng: 16.3738 },
 ];
 
 const ITINERARY = [
@@ -1555,6 +1555,92 @@ function CityMap({ mapData }) {
 }
 
 /* ---------------------------------------------------------------
+   WEATHER FORECAST (live, falls back to static seasonal text)
+--------------------------------------------------------------- */
+
+const WEATHER_CODE_LABELS = {
+  0: "Clear sky", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast",
+  45: "Fog", 48: "Foggy",
+  51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+  61: "Light rain", 63: "Rain", 65: "Heavy rain",
+  71: "Light snow", 73: "Snow", 75: "Heavy snow",
+  80: "Rain showers", 81: "Rain showers", 82: "Heavy showers",
+  95: "Thunderstorms", 96: "Thunderstorms", 99: "Severe thunderstorms",
+};
+function weatherLabel(code) {
+  return WEATHER_CODE_LABELS[code] || "Mixed conditions";
+}
+
+const WEATHER_CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
+
+function summarizeForecast(matched) {
+  const maxes = matched.map((d) => d.max);
+  const mins = matched.map((d) => d.min);
+  const freq = {};
+  matched.forEach((d) => { freq[d.code] = (freq[d.code] || 0) + 1; });
+  const modeCode = Number(Object.keys(freq).reduce((a, b) => (freq[a] >= freq[b] ? a : b)));
+  return {
+    range: `${Math.round(Math.min(...mins))}–${Math.round(Math.max(...maxes))}°C`,
+    label: weatherLabel(modeCode),
+  };
+}
+
+function WeatherCard({ city, days }) {
+  const [summary, setSummary] = useState(null); // null while unresolved -> falls back to static text
+
+  useEffect(() => {
+    let cancelled = false;
+    const cacheKey = `europe-trip-weather-${city.id}`;
+    const tripDates = days.map((d) => parseTripDate(d.date).toISOString().slice(0, 10));
+
+    const applyDaily = (daily) => {
+      if (!daily?.time) return false;
+      const matched = daily.time
+        .map((t, i) => ({ date: t, max: daily.temperature_2m_max[i], min: daily.temperature_2m_min[i], code: daily.weathercode[i] }))
+        .filter((d) => tripDates.includes(d.date));
+      if (!matched.length) return false;
+      if (!cancelled) setSummary(summarizeForecast(matched));
+      return true;
+    };
+
+    const cached = loadFromStorage(cacheKey);
+    if (cached && Date.now() - cached.fetchedAt < WEATHER_CACHE_TTL) {
+      applyDaily(cached.daily);
+      return;
+    }
+
+    fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16`
+    )
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("weather fetch failed"))))
+      .then((data) => {
+        saveToStorage(cacheKey, { fetchedAt: Date.now(), daily: data.daily });
+        applyDaily(data.daily);
+      })
+      .catch(() => {
+        if (cached) applyDaily(cached.daily);
+      });
+
+    return () => { cancelled = true; };
+  }, [city.id, city.lat, city.lng, days]);
+
+  return (
+    <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
+      <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] flex items-center gap-1.5">
+        Weather
+        {summary && <span className="text-[var(--cat-food)] normal-case tracking-normal">• forecast</span>}
+      </div>
+      <div className="font-display font-700 text-base mt-0.5" style={{ fontWeight: 700 }}>
+        {summary ? summary.range : city.weather}
+      </div>
+      <div className="text-[11px] text-[var(--text-secondary)] mt-1">
+        {summary ? summary.label : city.weatherNote}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
    CITY TAB
 --------------------------------------------------------------- */
 
@@ -1574,11 +1660,7 @@ function CityTab({ city, checklist, toggleCheck }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-5">
-        <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
-          <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Weather</div>
-          <div className="font-display font-700 text-base mt-0.5" style={{ fontWeight: 700 }}>{city.weather}</div>
-          <div className="text-[11px] text-[var(--text-secondary)] mt-1">{city.weatherNote}</div>
-        </div>
+        <WeatherCard city={city} days={days} />
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
           <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Currency</div>
           <div className="font-display font-700 text-base mt-0.5" style={{ fontWeight: 700 }}>{city.currency}</div>

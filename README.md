@@ -20,7 +20,10 @@ Vite + React + Tailwind app.
   a colored rail node and a city-tinted header band; tap any item to check
   it off.
 - **City guides** — per-city weather, currency, tips, must-go highlights,
-  things to do/eat, and restaurants.
+  things to do/eat, and restaurants. Weather shows a real forecast (via
+  Open-Meteo, free/no key) once that city's trip dates fall within the
+  ~16-day forecast horizon, cached for a few hours; otherwise falls back
+  to the static seasonal estimate.
 - **Budget tracker** — log expenses by description, amount, currency,
   category, and city; running totals per currency.
 - **Currency converter** — convert between AUD/EUR/HUF/CZK/USD, plus a
