@@ -47,14 +47,20 @@ Vite + React + Tailwind app.
   every surface/text/border token swaps in one place.
 - Tab transitions, a check-off "pop" animation, and hover/press feedback
   throughout — all disabled under `prefers-reduced-motion`.
-- **Icon-grid navigation** — Itinerary, Budget, Convert, Pack, Docs, and
-  Ask sit in a 3×2 grid of colored tiles (matching the budget category
-  palette), replacing the old scrolling pill row now that there are six
-  of them. Tapping a non-Itinerary tile opens a dedicated page with a
-  back-to-Itinerary button and a grid quick-jump popover to reach any
+- **Icon-grid navigation** — Itinerary, Budget, Convert, Pack, Docs, Ask,
+  and Reels sit in a grid of colored tiles (matching the budget category
+  palette), replacing the old scrolling pill row now that there are
+  seven of them. Tapping a non-Itinerary tile opens a dedicated page with
+  a back-to-Itinerary button and a grid quick-jump popover to reach any
   other tool in one tap. The eight cities keep their own always-visible,
   scrollable rail underneath, unchanged — tapping one still swaps content
   in place rather than opening a separate page.
+- **Edge-swipe to go back** — a rightward drag starting from the screen's
+  left edge (like iOS's native back gesture) returns to Itinerary from
+  any tool page or city, and steps back one level at a time inside
+  nested views (e.g. Reels' city detail → Reels' city grid → Itinerary).
+  Scoped to a thin edge strip so it never fights normal scrolling, the
+  cities rail, or the map's own drag/pan.
 - All progress (checklist + budget + cached FX rates + packing list +
   theme) is saved automatically to the browser's `localStorage` — no
   backend required.

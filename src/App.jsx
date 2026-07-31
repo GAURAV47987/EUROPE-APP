@@ -667,6 +667,54 @@ function resizeImageToBase64(file, maxDim = 1600, quality = 0.85) {
   });
 }
 
+// iOS-style edge-swipe-back: a rightward drag starting within a thin strip
+// at the left edge of the screen triggers onBack. Scoped to the edge (not
+// the whole screen) so it never fights normal scrolling, the cities rail,
+// or the map's own drag/pan.
+function useEdgeSwipeBack(onBack, enabled) {
+  const startRef = useRef(null);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const EDGE = 24;
+    const THRESHOLD = 70;
+    const MAX_VERTICAL = 60;
+
+    const onTouchStart = (e) => {
+      const t = e.touches[0];
+      startRef.current = t.clientX <= EDGE ? { x: t.clientX, y: t.clientY } : null;
+      firedRef.current = false;
+    };
+    const onTouchMove = (e) => {
+      if (!startRef.current || firedRef.current) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startRef.current.x;
+      const dy = Math.abs(t.clientY - startRef.current.y);
+      if (dy > MAX_VERTICAL) {
+        startRef.current = null;
+        return;
+      }
+      if (dx > THRESHOLD) {
+        firedRef.current = true;
+        onBack();
+      }
+    };
+    const onTouchEnd = () => {
+      startRef.current = null;
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [onBack, enabled]);
+}
+
 /* ---------------------------------------------------------------
    MAIN APP
 --------------------------------------------------------------- */
@@ -686,6 +734,17 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | error
   const [syncPanelOpen, setSyncPanelOpen] = useState(false);
   const [syncError, setSyncError] = useState(null);
+  const [reelsCity, setReelsCity] = useState(null);
+
+  const handleSwipeBack = useCallback(() => {
+    if (tab === "reels" && reelsCity) {
+      setReelsCity(null);
+      return;
+    }
+    if (tab !== "overview") setTab("overview");
+  }, [tab, reelsCity]);
+
+  useEdgeSwipeBack(handleSwipeBack, homePhase === "app");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -899,7 +958,9 @@ export default function App() {
                 <DocsTab cloudTripId={cloudTripId} onOpenSync={() => setSyncPanelOpen(true)} />
               )}
               {tab === "ask" && <AskTab />}
-              {tab === "reels" && <ReelsTab />}
+              {tab === "reels" && (
+                <ReelsTab selectedCityId={reelsCity} setSelectedCityId={setReelsCity} />
+              )}
               {activeCity && (
                 <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
               )}
@@ -2814,8 +2875,7 @@ const REEL_CATEGORIES = [
   { key: "duo", label: "Duo / couple" },
 ];
 
-function ReelsTab() {
-  const [selectedCityId, setSelectedCityId] = useState(null);
+function ReelsTab({ selectedCityId, setSelectedCityId }) {
   const selectedCity = CITIES.find((c) => c.id === selectedCityId);
 
   if (!selectedCity) {
