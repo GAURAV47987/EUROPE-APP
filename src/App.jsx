@@ -497,6 +497,7 @@ export default function App() {
           const trip = await fetchSharedTrip(cloudTripId);
           setBudget(trip.budget || []);
           setChecklist(trip.checklist || {});
+          setTripCode(trip.code || null);
           setSyncStatus("synced");
         } catch (e) {
           const b = loadFromStorage("europe-trip-budget");
@@ -575,6 +576,7 @@ export default function App() {
     setCloudTripId(trip.id);
     setBudget(trip.budget || []);
     setChecklist(trip.checklist || {});
+    setTripCode(code.trim().toUpperCase());
     setSyncStatus("synced");
   };
 

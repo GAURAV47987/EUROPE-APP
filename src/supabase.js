@@ -61,7 +61,7 @@ export async function joinSharedTrip(code) {
 
 export async function fetchSharedTrip(id) {
   await ensureSignedIn();
-  const { data, error } = await supabase.from("trips").select("budget, checklist").eq("id", id).single();
+  const { data, error } = await supabase.from("trips").select("budget, checklist, code").eq("id", id).single();
   if (error) throw error;
   return data;
 }
