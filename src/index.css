@@ -9,19 +9,22 @@ input, select, textarea {
 
 :root {
   color-scheme: light;
-  --bg: #F6F3EC;
-  --surface: #ffffff;
-  --border: #e4ded0;
-  --text-primary: #20232B;
-  --text-body: #31302a;
-  --text-tertiary: #4a4636;
-  --text-secondary: #6b6656;
-  --text-muted: #8c8570;
-  --text-faint: #a8a291;
-  --icon-empty: #c9c3b0;
-  --scrollbar-thumb: #d8d2c2;
-  --primary-bg: #20232B;
-  --primary-text: #ffffff;
+  /* Postcard Journal — kraft paper, ink navy, stamp red, tape gold */
+  --bg: #E9DEC4;
+  --surface: #FBF5E9;
+  --border: #D3C4A0;
+  --text-primary: #26344A;
+  --text-body: #3B3226;
+  --text-tertiary: #5C513F;
+  --text-secondary: #7C6A4E;
+  --text-muted: #94845F;
+  --text-faint: #B4A57E;
+  --icon-empty: #C9BB98;
+  --scrollbar-thumb: #D3C4A0;
+  --primary-bg: #26344A;
+  --primary-text: #F1EADA;
+  --stamp: #B23A2E;
+  --tape: #E8C468;
 
   /* Budget category palette — validated categorical order (dataviz skill),
      ALL checks pass at surface #ffffff; contrast WARN on 3 slots is
@@ -37,19 +40,22 @@ input, select, textarea {
 
 :root.dark {
   color-scheme: dark;
-  --bg: #1c1a16;
-  --surface: #26221b;
-  --border: #3a352b;
-  --text-primary: #f3efe4;
-  --text-body: #ede8da;
-  --text-tertiary: #d9d3c2;
-  --text-secondary: #b8b29e;
-  --text-muted: #9c9683;
-  --text-faint: #6e6858;
-  --icon-empty: #5c5646;
-  --scrollbar-thumb: #4a4636;
-  --primary-bg: #f3efe4;
-  --primary-text: #20232B;
+  /* Postcard Journal, night desk — deep ink navy paper, cream ink */
+  --bg: #1B2430;
+  --surface: #232E3D;
+  --border: #37455A;
+  --text-primary: #F1EADA;
+  --text-body: #E5DCC8;
+  --text-tertiary: #CBC0A6;
+  --text-secondary: #A79A7C;
+  --text-muted: #8A7F68;
+  --text-faint: #5C5A4E;
+  --icon-empty: #4A5568;
+  --scrollbar-thumb: #3D4A5E;
+  --primary-bg: #F1EADA;
+  --primary-text: #1B2430;
+  --stamp: #E0574A;
+  --tape: #E8C468;
 
   /* Budget category palette — dark-surface steps, validated against #26221b. */
   --cat-flights: #3987e5;
@@ -63,6 +69,7 @@ input, select, textarea {
 
 body {
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text-primary) 5%, transparent) 0 2px, transparent 2px 6px);
   transition: background-color 200ms ease;
 }

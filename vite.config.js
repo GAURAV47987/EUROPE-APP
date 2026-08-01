@@ -17,8 +17,8 @@ export default defineConfig({
         short_name: 'Europe 2026',
         description:
           'Itinerary, budget tracker, currency converter, packing list, and city maps for the Sydney → Athens → Ios → Paros → Budapest → Prague → Český Krumlov → Hallstatt → Vienna → Sydney trip.',
-        theme_color: '#20232B',
-        background_color: '#F6F3EC',
+        theme_color: '#26344A',
+        background_color: '#E9DEC4',
         display: 'standalone',
         start_url: '.',
         icons: [

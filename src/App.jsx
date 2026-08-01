@@ -1210,6 +1210,23 @@ function HomeScreen({ onEnter, folding, onFoldEnd }) {
           if (e.animationName === "foldAway") onFoldEnd?.();
         }}
       >
+      <div
+        aria-hidden="true"
+        className="absolute top-6 right-6 w-[68px] h-[68px] rounded-full flex items-center justify-center text-center pointer-events-none"
+        style={{
+          border: "2px dashed var(--stamp)",
+          color: "var(--stamp)",
+          transform: "rotate(-9deg)",
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          fontSize: "8px",
+          fontWeight: 700,
+          letterSpacing: "0.03em",
+          lineHeight: 1.35,
+        }}
+      >
+        SYD ⇄ ATH
+        <br />★ 2026 ★
+      </div>
       <div className="w-full max-w-sm py-12 flex flex-col items-center text-center gap-8">
         <div>
           <div className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.3em] text-[var(--text-muted)] font-mono mb-3">
@@ -1341,8 +1358,13 @@ function Header({ saveState, theme, toggleTheme, cloudTripId, syncStatus, onOpen
             Europe & Greek Islands
           </h1>
           <div className="text-right shrink-0">
-            <div className="font-mono text-[11px] text-[var(--text-muted)]">{tripStatusText(status)}</div>
-            <div className={`text-[11px] mt-0.5 transition-opacity ${saveState === "idle" ? "opacity-0" : "opacity-100"}`}>
+            <div
+              className="inline-block font-mono text-[10.5px] px-2 py-0.5 rounded-full"
+              style={{ border: "1px dashed var(--stamp)", color: "var(--stamp)" }}
+            >
+              {tripStatusText(status)}
+            </div>
+            <div className={`text-[11px] mt-1 transition-opacity ${saveState === "idle" ? "opacity-0" : "opacity-100"}`}>
               {saveState === "saving" ? "Saving…" : "Saved ✓"}
             </div>
           </div>
@@ -1605,6 +1627,8 @@ function iconFor(type) {
 }
 
 function OverviewTab({ checklist, toggleCheck }) {
+  const status = useMemo(() => getTripStatus(), []);
+  const todayIdx = status.phase === "during" ? status.dayOfTrip - 1 : -1;
   return (
     <div>
       <p className="text-sm text-[var(--text-secondary)] mb-5">
@@ -1616,12 +1640,27 @@ function OverviewTab({ checklist, toggleCheck }) {
           {ITINERARY.map((day, idx) => {
             const city = CITIES.find((c) => c.id === day.city);
             const dotColor = city ? city.accent : "var(--text-muted)";
+            const isToday = idx === todayIdx;
             return (
               <div key={idx} className="relative">
                 <span
                   className="absolute -left-[19px] top-[18px] w-3 h-3 rounded-full ring-4 ring-[var(--bg)] z-10"
                   style={{ background: dotColor }}
                 />
+                {isToday && (
+                  <div
+                    aria-hidden="true"
+                    className="absolute -top-2 left-5 w-16 h-5 z-20 flex items-center justify-center text-[8.5px] font-bold tracking-wide uppercase pointer-events-none"
+                    style={{
+                      background: "color-mix(in srgb, var(--tape) 75%, transparent)",
+                      color: "var(--text-primary)",
+                      transform: "rotate(-4deg)",
+                      boxShadow: "0 1px 2px rgba(0,0,0,.15)",
+                    }}
+                  >
+                    Today
+                  </div>
+                )}
                 <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden">
                   <div className="px-4 py-2.5" style={{ background: city ? city.accent + "14" : "transparent" }}>
                     <div className="flex items-baseline justify-between gap-2">

@@ -40,9 +40,17 @@ Vite + React + Tailwind app.
 - **Budget breakdown chart** — spend by category, normalized to AUD, using
   a colorblind-validated categorical palette (see `dataviz` skill) with
   direct labels on every bar.
+- **"Postcard Journal" theme** — kraft-paper background with a subtle
+  linen texture, ink-navy headings, and a stamp-red/tape-gold accent
+  pair, applied through the same CSS custom properties used everywhere
+  else in the app. Signature touches: a rotated passport-stamp badge on
+  the splash screen, a dashed postmark-style chip for the header's
+  day/countdown status, and a washi-tape "Today" marker that pins itself
+  to the current day's card on the Itinerary page while travelling.
 - **Dark mode** — a header toggle, defaulting to system preference,
   persisted to `localStorage`; implemented via CSS custom properties so
-  every surface/text/border token swaps in one place.
+  every surface/text/border token swaps in one place (a "night desk"
+  variant of the Postcard Journal theme).
 - Tab transitions, a check-off "pop" animation, and hover/press feedback
   throughout — all disabled under `prefers-reduced-motion`.
 - **Icon-grid navigation** — a clean home screen: the eight cities'
