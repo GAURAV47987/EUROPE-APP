@@ -933,15 +933,26 @@ export default function App() {
       {homePhase !== "home" && (
         <>
           <div className="sticky top-0 z-20 bg-[var(--bg)]">
-            <Header
-              saveState={saveState}
-              theme={theme}
-              toggleTheme={toggleTheme}
-              cloudTripId={cloudTripId}
-              syncStatus={syncStatus}
-              onOpenSync={() => setSyncPanelOpen(true)}
+            <div className="bg-[var(--surface)]" style={{ boxShadow: "0 2px 6px rgba(0,0,0,.06)" }}>
+              <Header
+                saveState={saveState}
+                theme={theme}
+                toggleTheme={toggleTheme}
+                cloudTripId={cloudTripId}
+                syncStatus={syncStatus}
+                onOpenSync={() => setSyncPanelOpen(true)}
+              />
+              <TabBar tab={tab} setTab={setTab} />
+            </div>
+            <div
+              aria-hidden="true"
+              className="h-[10px] w-full"
+              style={{
+                background: "var(--surface)",
+                clipPath:
+                  "polygon(0 0,100% 0,100% 30%,97% 100%,94% 30%,91% 100%,88% 30%,85% 100%,82% 30%,79% 100%,76% 30%,73% 100%,70% 30%,67% 100%,64% 30%,61% 100%,58% 30%,55% 100%,52% 30%,49% 100%,46% 30%,43% 100%,40% 30%,37% 100%,34% 30%,31% 100%,28% 30%,25% 100%,22% 30%,19% 100%,16% 30%,13% 100%,10% 30%,7% 100%,4% 30%,1% 100%,0 30%)",
+              }}
             />
-            <TabBar tab={tab} setTab={setTab} />
           </div>
 
           <main className="max-w-3xl mx-auto px-4 pb-24 pt-5">
@@ -1628,7 +1639,8 @@ function iconFor(type) {
 
 function OverviewTab({ checklist, toggleCheck }) {
   const status = useMemo(() => getTripStatus(), []);
-  const todayIdx = status.phase === "during" ? status.dayOfTrip - 1 : -1;
+  const highlightIdx = status.phase === "during" ? status.dayOfTrip - 1 : status.phase === "before" ? 0 : -1;
+  const highlightLabel = status.phase === "during" ? "Today" : "Next up";
   return (
     <div>
       <p className="text-sm text-[var(--text-secondary)] mb-5">
@@ -1640,25 +1652,25 @@ function OverviewTab({ checklist, toggleCheck }) {
           {ITINERARY.map((day, idx) => {
             const city = CITIES.find((c) => c.id === day.city);
             const dotColor = city ? city.accent : "var(--text-muted)";
-            const isToday = idx === todayIdx;
+            const isHighlighted = idx === highlightIdx;
             return (
               <div key={idx} className="relative">
                 <span
                   className="absolute -left-[19px] top-[18px] w-3 h-3 rounded-full ring-4 ring-[var(--bg)] z-10"
                   style={{ background: dotColor }}
                 />
-                {isToday && (
+                {isHighlighted && (
                   <div
                     aria-hidden="true"
-                    className="absolute -top-2 left-5 w-16 h-5 z-20 flex items-center justify-center text-[8.5px] font-bold tracking-wide uppercase pointer-events-none"
+                    className="absolute -top-2.5 left-5 w-20 h-6 z-20 flex items-center justify-center text-[9px] font-bold tracking-wide uppercase pointer-events-none"
                     style={{
-                      background: "color-mix(in srgb, var(--tape) 75%, transparent)",
+                      background: "color-mix(in srgb, var(--tape) 82%, transparent)",
                       color: "var(--text-primary)",
                       transform: "rotate(-4deg)",
-                      boxShadow: "0 1px 2px rgba(0,0,0,.15)",
+                      boxShadow: "0 2px 3px rgba(0,0,0,.18)",
                     }}
                   >
-                    Today
+                    {highlightLabel}
                   </div>
                 )}
                 <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden">
