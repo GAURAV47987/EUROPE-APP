@@ -831,6 +831,25 @@ export default function App() {
     setCustomCrossCityIdeas((prev) => prev.filter((idea) => idea.id !== id));
   };
 
+  const [customPerCityIdeas, setCustomPerCityIdeas] = useState(
+    () => loadFromStorage("europe-trip-reel-ideas-percity-custom") || {}
+  );
+  useEffect(() => {
+    saveToStorage("europe-trip-reel-ideas-percity-custom", customPerCityIdeas);
+  }, [customPerCityIdeas]);
+  const addPerCityIdea = (cityId, title) => {
+    setCustomPerCityIdeas((prev) => ({
+      ...prev,
+      [cityId]: [...(prev[cityId] || []), { id: `custom-${Date.now()}`, title, desc: "" }],
+    }));
+  };
+  const removePerCityIdea = (cityId, id) => {
+    setCustomPerCityIdeas((prev) => ({
+      ...prev,
+      [cityId]: (prev[cityId] || []).filter((idea) => idea.id !== id),
+    }));
+  };
+
   const addExpense = (entry) => {
     setBudget((prev) => [...prev, { ...entry, id: Date.now().toString() }]);
   };
@@ -987,10 +1006,13 @@ export default function App() {
                   selectedCityId={reelsCity}
                   setSelectedCityId={setReelsCity}
                   customCrossCityIdeas={customCrossCityIdeas}
+                  customPerCityIdeas={customPerCityIdeas}
                   checklist={checklist}
                   toggleCheck={toggleCheck}
                   onAddIdea={addCrossCityIdea}
                   onRemoveIdea={removeCrossCityIdea}
+                  onAddPerCityIdea={addPerCityIdea}
+                  onRemovePerCityIdea={removePerCityIdea}
                 />
               )}
               {activeCity && (
@@ -3008,7 +3030,72 @@ function CrossCityCategory({ cityId, accent, customIdeas, checklist, toggleCheck
   );
 }
 
-function ReelsTab({ selectedCityId, setSelectedCityId, customCrossCityIdeas, checklist, toggleCheck, onAddIdea, onRemoveIdea }) {
+function PerCityCustomSection({ cityId, accent, customIdeas, checklist, toggleCheck, onAddIdea, onRemoveIdea }) {
+  const [newTitle, setNewTitle] = useState("");
+  return (
+    <Section icon={<Clapperboard size={15} />} title="Your ideas" accent={accent}>
+      <p className="text-[12px] text-[var(--text-secondary)] mb-2.5 -mt-1">
+        Anything else worth shooting here — either of you can jot it down.
+      </p>
+      {customIdeas.length > 0 && (
+        <div className="space-y-2 mb-2.5">
+          {customIdeas.map((idea) => {
+            const key = `reel-custom-${cityId}-${idea.id}`;
+            const checked = !!checklist[key];
+            return (
+              <div key={idea.id} className="relative">
+                <ReelIdeaRow title={idea.title} desc={idea.desc} checked={checked} onClick={() => toggleCheck(key)} accent={accent} />
+                <button
+                  onClick={() => onRemoveIdea(cityId, idea.id)}
+                  aria-label={`Remove ${idea.title}`}
+                  className="absolute top-2.5 right-2.5 text-[var(--text-faint)] hover:text-[var(--stamp)] transition-colors"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!newTitle.trim()) return;
+          onAddIdea(cityId, newTitle.trim());
+          setNewTitle("");
+        }}
+        className="flex items-center gap-2"
+      >
+        <input
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="Add your own idea…"
+          className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[var(--stamp)]"
+        />
+        <button
+          type="submit"
+          aria-label="Add idea"
+          className="p-2 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+        >
+          <Plus size={16} />
+        </button>
+      </form>
+    </Section>
+  );
+}
+
+function ReelsTab({
+  selectedCityId,
+  setSelectedCityId,
+  customCrossCityIdeas,
+  customPerCityIdeas,
+  checklist,
+  toggleCheck,
+  onAddIdea,
+  onRemoveIdea,
+  onAddPerCityIdea,
+  onRemovePerCityIdea,
+}) {
   const selectedCity = CITIES.find((c) => c.id === selectedCityId);
 
   if (!selectedCity) {
@@ -3040,13 +3127,18 @@ function ReelsTab({ selectedCityId, setSelectedCityId, customCrossCityIdeas, che
 
   const ideas = REEL_IDEAS[selectedCity.id];
   const allCrossCityIdeas = [...CROSS_CITY_REEL_IDEAS, ...customCrossCityIdeas];
+  const cityCustomIdeas = customPerCityIdeas[selectedCity.id] || [];
   const cityIdeaCount =
-    REEL_CATEGORIES.reduce((sum, cat) => sum + (ideas?.[cat.key]?.length || 0), 0) + allCrossCityIdeas.length;
+    REEL_CATEGORIES.reduce((sum, cat) => sum + (ideas?.[cat.key]?.length || 0), 0) +
+    allCrossCityIdeas.length +
+    cityCustomIdeas.length;
   const cityDoneCount =
     REEL_CATEGORIES.reduce((sum, cat) => {
       const items = ideas?.[cat.key] || [];
       return sum + items.filter((_, i) => checklist[`reel-idea-${selectedCity.id}-${cat.key}-${i}`]).length;
-    }, 0) + allCrossCityIdeas.filter((idea) => checklist[`reel-cross-${idea.id}-${selectedCity.id}`]).length;
+    }, 0) +
+    allCrossCityIdeas.filter((idea) => checklist[`reel-cross-${idea.id}-${selectedCity.id}`]).length +
+    cityCustomIdeas.filter((idea) => checklist[`reel-custom-${selectedCity.id}-${idea.id}`]).length;
   const cityPct = cityIdeaCount > 0 ? (cityDoneCount / cityIdeaCount) * 100 : 0;
 
   return (
@@ -3104,6 +3196,16 @@ function ReelsTab({ selectedCityId, setSelectedCityId, customCrossCityIdeas, che
           </Section>
         );
       })}
+
+      <PerCityCustomSection
+        cityId={selectedCity.id}
+        accent={selectedCity.accent}
+        customIdeas={cityCustomIdeas}
+        checklist={checklist}
+        toggleCheck={toggleCheck}
+        onAddIdea={onAddPerCityIdea}
+        onRemoveIdea={onRemovePerCityIdea}
+      />
     </div>
   );
 }

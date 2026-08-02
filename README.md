@@ -102,10 +102,14 @@ Vite + React + Tailwind app.
   per city so checking one off in Athens doesn't hide it in Ios and you
   don't reach the end of the trip missing a clip — plus a spot to add
   your own idea, which then shows up (unchecked) in every other city too.
-  Below that are that city's own landmark/food/vlog/duo ideas. Everything
-  is a checklist just like the packing list — tap an idea once you've
-  shot it and it crosses off, with a per-city progress ring counting both
-  the cross-city and city-specific ideas together.
+  Below that are that city's own landmark/food/vlog/duo ideas, and a
+  "Your ideas" box at the end of every city to jot down anything else
+  worth shooting there. Everything is a checklist just like the packing
+  list — tap an idea once you've shot it and it crosses off, with a
+  per-city progress ring counting all of it together. Note: ideas either
+  of you type into these boxes currently save to that device only —
+  they're not yet synced to the paired phone the way budget/checklist
+  progress is.
 - **Documents** — upload tickets, passport scans, and booking
   confirmations (images or PDFs, up to 20MB) once paired via sync; view
   or delete them from either synced device. Stored in a private Supabase
