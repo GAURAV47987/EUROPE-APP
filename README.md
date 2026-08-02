@@ -96,13 +96,16 @@ Vite + React + Tailwind app.
   Backed by the same Groq-powered edge function as receipt scanning. See
   `supabase/functions/groq-assist`.
 - **Reels** — TikTok/Reels content-shoot ideas, static content grounded in
-  the real itinerary, no AI call needed. A "Cross city" section lists 16
-  ideas that need one clip from every city (outfit check, coffee rating,
-  golden hour, etc.) plus a spot to add your own; per-city ideas (landmark
-  & scenery, food, a mini-vlog outline, duo/couple shots) live under each
-  city. Both are checklists just like the packing list — tap an idea once
-  you've shot it and it crosses off, with a progress ring per city and for
-  the cross-city list.
+  the real itinerary, no AI call needed. Opening any city shows a "Cross
+  city" section first — 16 ideas that need one clip from every stop
+  (outfit check, coffee rating, golden hour, etc.), tracked separately
+  per city so checking one off in Athens doesn't hide it in Ios and you
+  don't reach the end of the trip missing a clip — plus a spot to add
+  your own idea, which then shows up (unchecked) in every other city too.
+  Below that are that city's own landmark/food/vlog/duo ideas. Everything
+  is a checklist just like the packing list — tap an idea once you've
+  shot it and it crosses off, with a per-city progress ring counting both
+  the cross-city and city-specific ideas together.
 - **Documents** — upload tickets, passport scans, and booking
   confirmations (images or PDFs, up to 20MB) once paired via sync; view
   or delete them from either synced device. Stored in a private Supabase

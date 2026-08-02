@@ -2949,35 +2949,25 @@ function ReelIdeaRow({ title, desc, checked, onClick, accent }) {
   );
 }
 
-function CrossCityReelSection({ customIdeas, checklist, toggleCheck, onAddIdea, onRemoveIdea }) {
+function CrossCityCategory({ cityId, accent, customIdeas, checklist, toggleCheck, onAddIdea, onRemoveIdea }) {
   const [newTitle, setNewTitle] = useState("");
   const allIdeas = [...CROSS_CITY_REEL_IDEAS, ...customIdeas];
-  const doneCount = allIdeas.filter((idea) => checklist[`reel-cross-${idea.id}`]).length;
-  const pct = allIdeas.length > 0 ? (doneCount / allIdeas.length) * 100 : 0;
+  const doneCount = allIdeas.filter((idea) => checklist[`reel-cross-${idea.id}-${cityId}`]).length;
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-1">
-        <Clapperboard size={15} className="text-[var(--text-muted)]" />
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Cross city</h2>
-      </div>
-      <p className="text-[12px] text-[var(--text-secondary)] mb-3">
-        One idea, one clip from every city, stitched into a single video at the end. Cross each off as you shoot it.
+    <Section icon={<Clapperboard size={15} />} title={`Cross city (${doneCount}/${allIdeas.length})`} accent={accent}>
+      <p className="text-[12px] text-[var(--text-secondary)] mb-2.5 -mt-1">
+        One clip from every city for these — cross each off once you've shot it here, so you don't get to the end
+        and realize you missed one.
       </p>
-      <div className="flex items-center gap-4 mb-4">
-        <ProgressRing pct={pct} size={52} strokeWidth={5} />
-        <div className="font-mono text-xs text-[var(--text-muted)]">
-          {doneCount} / {allIdeas.length} shot
-        </div>
-      </div>
       <div className="space-y-2">
         {allIdeas.map((idea) => {
-          const key = `reel-cross-${idea.id}`;
+          const key = `reel-cross-${idea.id}-${cityId}`;
           const checked = !!checklist[key];
           const isCustom = customIdeas.some((c) => c.id === idea.id);
           return (
             <div key={idea.id} className="relative">
-              <ReelIdeaRow title={idea.title} desc={idea.desc} checked={checked} onClick={() => toggleCheck(key)} accent="var(--stamp)" />
+              <ReelIdeaRow title={idea.title} desc={idea.desc} checked={checked} onClick={() => toggleCheck(key)} accent={accent} />
               {isCustom && (
                 <button
                   onClick={() => onRemoveIdea(idea.id)}
@@ -2998,7 +2988,7 @@ function CrossCityReelSection({ customIdeas, checklist, toggleCheck, onAddIdea, 
           onAddIdea(newTitle.trim());
           setNewTitle("");
         }}
-        className="flex items-center gap-2 mt-3"
+        className="flex items-center gap-2 mt-2.5"
       >
         <input
           value={newTitle}
@@ -3014,7 +3004,7 @@ function CrossCityReelSection({ customIdeas, checklist, toggleCheck, onAddIdea, 
           <Plus size={16} />
         </button>
       </form>
-    </div>
+    </Section>
   );
 }
 
@@ -3024,20 +3014,9 @@ function ReelsTab({ selectedCityId, setSelectedCityId, customCrossCityIdeas, che
   if (!selectedCity) {
     return (
       <div>
-        <CrossCityReelSection
-          customIdeas={customCrossCityIdeas}
-          checklist={checklist}
-          toggleCheck={toggleCheck}
-          onAddIdea={onAddIdea}
-          onRemoveIdea={onRemoveIdea}
-        />
-        <div className="flex items-center gap-2 mb-1">
-          <Camera size={15} className="text-[var(--text-muted)]" />
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Per-city ideas</h2>
-        </div>
         <p className="text-sm text-[var(--text-secondary)] mb-5">
-          Pick a city to see reel/content ideas for it — landmark shots, food clips, a mini vlog outline, and a
-          couple of duo-specific ideas.
+          Pick a city to see its reel ideas — landmark shots, food clips, a mini vlog outline, duo-specific ideas,
+          and the cross-city list (shot in every city, so open each city as you go and cross it off there).
         </p>
         <div className="grid grid-cols-2 gap-2.5">
           {CITIES.map((c) => (
@@ -3060,11 +3039,14 @@ function ReelsTab({ selectedCityId, setSelectedCityId, customCrossCityIdeas, che
   }
 
   const ideas = REEL_IDEAS[selectedCity.id];
-  const cityIdeaCount = REEL_CATEGORIES.reduce((sum, cat) => sum + (ideas?.[cat.key]?.length || 0), 0);
-  const cityDoneCount = REEL_CATEGORIES.reduce((sum, cat) => {
-    const items = ideas?.[cat.key] || [];
-    return sum + items.filter((_, i) => checklist[`reel-idea-${selectedCity.id}-${cat.key}-${i}`]).length;
-  }, 0);
+  const allCrossCityIdeas = [...CROSS_CITY_REEL_IDEAS, ...customCrossCityIdeas];
+  const cityIdeaCount =
+    REEL_CATEGORIES.reduce((sum, cat) => sum + (ideas?.[cat.key]?.length || 0), 0) + allCrossCityIdeas.length;
+  const cityDoneCount =
+    REEL_CATEGORIES.reduce((sum, cat) => {
+      const items = ideas?.[cat.key] || [];
+      return sum + items.filter((_, i) => checklist[`reel-idea-${selectedCity.id}-${cat.key}-${i}`]).length;
+    }, 0) + allCrossCityIdeas.filter((idea) => checklist[`reel-cross-${idea.id}-${selectedCity.id}`]).length;
   const cityPct = cityIdeaCount > 0 ? (cityDoneCount / cityIdeaCount) * 100 : 0;
 
   return (
@@ -3087,6 +3069,16 @@ function ReelsTab({ selectedCityId, setSelectedCityId, customCrossCityIdeas, che
           <div className="font-mono text-[11px] opacity-80 mt-0.5">{cityDoneCount} / {cityIdeaCount} shot</div>
         </div>
       </div>
+
+      <CrossCityCategory
+        cityId={selectedCity.id}
+        accent={selectedCity.accent}
+        customIdeas={customCrossCityIdeas}
+        checklist={checklist}
+        toggleCheck={toggleCheck}
+        onAddIdea={onAddIdea}
+        onRemoveIdea={onRemoveIdea}
+      />
 
       {REEL_CATEGORIES.map((cat) => {
         const items = ideas?.[cat.key];
