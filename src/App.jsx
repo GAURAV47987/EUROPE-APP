@@ -818,6 +818,19 @@ export default function App() {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [customCrossCityIdeas, setCustomCrossCityIdeas] = useState(
+    () => loadFromStorage("europe-trip-reel-ideas-custom") || []
+  );
+  useEffect(() => {
+    saveToStorage("europe-trip-reel-ideas-custom", customCrossCityIdeas);
+  }, [customCrossCityIdeas]);
+  const addCrossCityIdea = (title) => {
+    setCustomCrossCityIdeas((prev) => [...prev, { id: `custom-${Date.now()}`, title, desc: "" }]);
+  };
+  const removeCrossCityIdea = (id) => {
+    setCustomCrossCityIdeas((prev) => prev.filter((idea) => idea.id !== id));
+  };
+
   const addExpense = (entry) => {
     setBudget((prev) => [...prev, { ...entry, id: Date.now().toString() }]);
   };
@@ -970,7 +983,15 @@ export default function App() {
               )}
               {tab === "ask" && <AskTab />}
               {tab === "reels" && (
-                <ReelsTab selectedCityId={reelsCity} setSelectedCityId={setReelsCity} />
+                <ReelsTab
+                  selectedCityId={reelsCity}
+                  setSelectedCityId={setReelsCity}
+                  customCrossCityIdeas={customCrossCityIdeas}
+                  checklist={checklist}
+                  toggleCheck={toggleCheck}
+                  onAddIdea={addCrossCityIdea}
+                  onRemoveIdea={removeCrossCityIdea}
+                />
               )}
               {activeCity && (
                 <CityTab city={activeCity} checklist={checklist} toggleCheck={toggleCheck} />
@@ -2884,12 +2905,136 @@ const REEL_CATEGORIES = [
   { key: "duo", label: "Duo / couple" },
 ];
 
-function ReelsTab({ selectedCityId, setSelectedCityId }) {
+const CROSS_CITY_REEL_IDEAS = [
+  { id: "outfit", title: "Outfit check, every city", desc: "Same transition pose or spin, new outfit and backdrop each time — cut them together at the end." },
+  { id: "coffee", title: "Rate the coffee", desc: "One coffee order plus an on-camera rating in each city, Sydney to Vienna." },
+  { id: "intro", title: "\"We're in ___\" intro", desc: "A 3-second to-camera clip naming the city and day number — doubles as your recap timeline." },
+  { id: "golden-hour", title: "Golden hour, every city", desc: "One sunset or golden-hour shot per stop, same framing style, cut into a single montage." },
+  { id: "sweet-treat", title: "Local sweet treat taste-test", desc: "Baklava in Athens, loukoumades on the islands, dobos torte in Budapest, trdelník in Prague, apple strudel in Vienna — rate each on camera." },
+  { id: "transition-door", title: "Door / window reveal transition", desc: "Push open a door, shutter, or curtain into the next city — a classic whip-transition template." },
+  { id: "balcony-view", title: "Balcony or room-view rating", desc: "A quick pan across the view from wherever you're staying, each city." },
+  { id: "walk-toward", title: "Same walk-toward-camera", desc: "Walk toward the lens down a street, beach, or alley in each city — great transition material." },
+  { id: "local-drink", title: "Local specialty drink", desc: "Ouzo in Greece, a spritz in Vienna, a local beer in Prague or Č. Krumlov — one clink-and-sip clip per stop." },
+  { id: "market-walk", title: "Market or grocery store walk", desc: "60 seconds wandering a local market or supermarket — produce, prices, and packaging all look different." },
+  { id: "street-sign", title: "Street sign / welcome sign selfie", desc: "Find the city-name sign, welcome mural, or station platform sign and grab a selfie with it." },
+  { id: "weather-compare", title: "Outfit-for-the-weather comparison", desc: "Beachwear in Ios/Paros vs. layers in Hallstatt — a literal before/after as the climate flips." },
+  { id: "silhouette", title: "Couple silhouette against a landmark", desc: "A backlit silhouette shot with one recognizable landmark per city — Acropolis, Fisherman's Bastion, Charles Bridge, Schönbrunn." },
+  { id: "transport-bit", title: "Rate the public transport", desc: "A quick bit rating the ferry, metro, tram, or train in each place — surprisingly good recurring joke." },
+  { id: "bag-flatlay", title: "What's in the day bag", desc: "The same flatlay or dump shot of that day's bag contents, once per city — fun to see what changes." },
+  { id: "one-sec-a-day", title: "One-second-a-day clip", desc: "Grab exactly one second of footage daily, no matter what — stitches into a short trip recap at the end." },
+];
+
+function ReelIdeaRow({ title, desc, checked, onClick, accent }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-start gap-2.5 w-full text-left bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3.5 py-3 hover:border-[var(--text-faint)] active:scale-[0.98] transition-[transform,border-color]"
+    >
+      {checked ? (
+        <CheckCircle2 size={17} style={{ color: accent }} className="shrink-0 mt-0.5 check-pop" />
+      ) : (
+        <Circle size={17} className="text-[var(--icon-empty)] shrink-0 mt-0.5" />
+      )}
+      <div className="min-w-0">
+        <div className={`text-sm font-medium ${checked ? "line-through text-[var(--text-faint)]" : "text-[var(--text-primary)]"}`}>
+          {title}
+        </div>
+        {desc && (
+          <div className={`text-[12px] mt-0.5 ${checked ? "text-[var(--text-faint)]" : "text-[var(--text-secondary)]"}`}>
+            {desc}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function CrossCityReelSection({ customIdeas, checklist, toggleCheck, onAddIdea, onRemoveIdea }) {
+  const [newTitle, setNewTitle] = useState("");
+  const allIdeas = [...CROSS_CITY_REEL_IDEAS, ...customIdeas];
+  const doneCount = allIdeas.filter((idea) => checklist[`reel-cross-${idea.id}`]).length;
+  const pct = allIdeas.length > 0 ? (doneCount / allIdeas.length) * 100 : 0;
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <Clapperboard size={15} className="text-[var(--text-muted)]" />
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Cross city</h2>
+      </div>
+      <p className="text-[12px] text-[var(--text-secondary)] mb-3">
+        One idea, one clip from every city, stitched into a single video at the end. Cross each off as you shoot it.
+      </p>
+      <div className="flex items-center gap-4 mb-4">
+        <ProgressRing pct={pct} size={52} strokeWidth={5} />
+        <div className="font-mono text-xs text-[var(--text-muted)]">
+          {doneCount} / {allIdeas.length} shot
+        </div>
+      </div>
+      <div className="space-y-2">
+        {allIdeas.map((idea) => {
+          const key = `reel-cross-${idea.id}`;
+          const checked = !!checklist[key];
+          const isCustom = customIdeas.some((c) => c.id === idea.id);
+          return (
+            <div key={idea.id} className="relative">
+              <ReelIdeaRow title={idea.title} desc={idea.desc} checked={checked} onClick={() => toggleCheck(key)} accent="var(--stamp)" />
+              {isCustom && (
+                <button
+                  onClick={() => onRemoveIdea(idea.id)}
+                  aria-label={`Remove ${idea.title}`}
+                  className="absolute top-2.5 right-2.5 text-[var(--text-faint)] hover:text-[var(--stamp)] transition-colors"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!newTitle.trim()) return;
+          onAddIdea(newTitle.trim());
+          setNewTitle("");
+        }}
+        className="flex items-center gap-2 mt-3"
+      >
+        <input
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="Add your own idea…"
+          className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[var(--stamp)]"
+        />
+        <button
+          type="submit"
+          aria-label="Add idea"
+          className="p-2 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+        >
+          <Plus size={16} />
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function ReelsTab({ selectedCityId, setSelectedCityId, customCrossCityIdeas, checklist, toggleCheck, onAddIdea, onRemoveIdea }) {
   const selectedCity = CITIES.find((c) => c.id === selectedCityId);
 
   if (!selectedCity) {
     return (
       <div>
+        <CrossCityReelSection
+          customIdeas={customCrossCityIdeas}
+          checklist={checklist}
+          toggleCheck={toggleCheck}
+          onAddIdea={onAddIdea}
+          onRemoveIdea={onRemoveIdea}
+        />
+        <div className="flex items-center gap-2 mb-1">
+          <Camera size={15} className="text-[var(--text-muted)]" />
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Per-city ideas</h2>
+        </div>
         <p className="text-sm text-[var(--text-secondary)] mb-5">
           Pick a city to see reel/content ideas for it — landmark shots, food clips, a mini vlog outline, and a
           couple of duo-specific ideas.
@@ -2915,6 +3060,12 @@ function ReelsTab({ selectedCityId, setSelectedCityId }) {
   }
 
   const ideas = REEL_IDEAS[selectedCity.id];
+  const cityIdeaCount = REEL_CATEGORIES.reduce((sum, cat) => sum + (ideas?.[cat.key]?.length || 0), 0);
+  const cityDoneCount = REEL_CATEGORIES.reduce((sum, cat) => {
+    const items = ideas?.[cat.key] || [];
+    return sum + items.filter((_, i) => checklist[`reel-idea-${selectedCity.id}-${cat.key}-${i}`]).length;
+  }, 0);
+  const cityPct = cityIdeaCount > 0 ? (cityDoneCount / cityIdeaCount) * 100 : 0;
 
   return (
     <div>
@@ -2926,11 +3077,15 @@ function ReelsTab({ selectedCityId, setSelectedCityId }) {
       </button>
 
       <div
-        className="rounded-2xl p-4 mb-5 text-white"
+        className="rounded-2xl p-4 mb-5 text-white flex items-center gap-4"
         style={{ background: selectedCity.accent }}
       >
-        <div className="font-mono text-[11px] uppercase tracking-widest opacity-80">{selectedCity.country}</div>
-        <div className="font-display text-xl font-700" style={{ fontWeight: 700 }}>{selectedCity.name} — reel ideas</div>
+        <ProgressRing pct={cityPct} size={48} strokeWidth={5} />
+        <div>
+          <div className="font-mono text-[11px] uppercase tracking-widest opacity-80">{selectedCity.country}</div>
+          <div className="font-display text-xl font-700" style={{ fontWeight: 700 }}>{selectedCity.name} — reel ideas</div>
+          <div className="font-mono text-[11px] opacity-80 mt-0.5">{cityDoneCount} / {cityIdeaCount} shot</div>
+        </div>
       </div>
 
       {REEL_CATEGORIES.map((cat) => {
@@ -2939,12 +3094,20 @@ function ReelsTab({ selectedCityId, setSelectedCityId }) {
         return (
           <Section key={cat.key} icon={<Clapperboard size={15} />} title={cat.label} accent={selectedCity.accent}>
             <div className="space-y-2">
-              {items.map((idea, i) => (
-                <div key={i} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3.5 py-3">
-                  <div className="text-sm font-medium text-[var(--text-primary)]">{idea.title}</div>
-                  <div className="text-[12px] text-[var(--text-secondary)] mt-0.5">{idea.desc}</div>
-                </div>
-              ))}
+              {items.map((idea, i) => {
+                const key = `reel-idea-${selectedCity.id}-${cat.key}-${i}`;
+                const checked = !!checklist[key];
+                return (
+                  <ReelIdeaRow
+                    key={i}
+                    title={idea.title}
+                    desc={idea.desc}
+                    checked={checked}
+                    onClick={() => toggleCheck(key)}
+                    accent={selectedCity.accent}
+                  />
+                );
+              })}
             </div>
           </Section>
         );
