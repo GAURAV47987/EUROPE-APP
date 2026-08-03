@@ -4,7 +4,7 @@ import {
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, ChevronLeft, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
   Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye,
-  Camera, MessageCircle, LayoutGrid, Clapperboard
+  Camera, MessageCircle, LayoutGrid, Clapperboard, Bell, CalendarPlus
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -32,27 +32,27 @@ const CITIES = [
 ];
 
 const ITINERARY = [
-  { date: "Aug 23", day: "Sat", city: null, title: "Depart Sydney", items: [
+  { date: "Aug 23", city: null, title: "Depart Sydney", items: [
     { time: "2:50 PM", text: "Flight 8400 · Sydney → Doha", booked: true, icon: "flight" },
     { time: "3h 40m", text: "Layover in Doha", booked: false },
     { time: "2:20 AM", text: "Flight 211 · Doha → Athens", booked: true, icon: "flight" },
   ]},
-  { date: "Aug 24", day: "Sun", city: "athens", title: "Arrive in Athens", items: [
+  { date: "Aug 24", city: "athens", title: "Arrive in Athens", items: [
     { time: "7:00 AM", text: "Land in Athens, check in", booked: true, icon: "flight" },
     { time: "", text: "Explore Plaka neighbourhood", booked: false },
     { time: "", text: "Explore Psyrri neighbourhood", booked: false },
     { time: "", text: "Monastiraki flea market", booked: false },
   ]},
-  { date: "Aug 25", day: "Mon", city: "athens", title: "Ancient Athens", items: [
+  { date: "Aug 25", city: "athens", title: "Ancient Athens", items: [
     { time: "", text: "Acropolis Museum", booked: false },
     { time: "", text: "Ancient Agora", booked: false },
     { time: "6:00 PM", text: "Acropolis", booked: true },
   ]},
-  { date: "Aug 26", day: "Tue", city: "athens", title: "City walk + the coast", items: [
+  { date: "Aug 26", city: "athens", title: "City walk + the coast", items: [
     { time: "Morning", text: "Walking tour of the city", booked: false },
     { time: "3:00 PM", text: "Lake Vouliagmeni", booked: true, note: "Booking time 3PM. How to reach — Public Transit (Metro + Bus), most cost-effective: 1) Take Metro Line 2 (Red Line) from Syntagma or Omonia to the final southern stop, Elliniko. 2) Outside Elliniko station, catch Bus 122 (Elliniko–Saronida). 3) Ride ~30 min and get off at the \"Limni\" (Lake) stop, steps from the entrance. 4) Cost: a standard 90-minute integrated transit ticket is €1.20. — Or Taxi/Ride-share (fastest): hail a yellow taxi at Monastiraki Square or use Uber/FreeNow. ~35–45 min depending on traffic, €20–€30 one-way." },
   ]},
-  { date: "Aug 27", day: "Wed", city: "ios", title: "On to Ios", items: [
+  { date: "Aug 27", city: "ios", title: "On to Ios", items: [
     { time: "9:00 AM", text: "Ferry from Athens · Olympic Champion Jet", booked: true, icon: "ferry", note: "From Monastiraki (Airbnb) to Piraeus port: take Metro Line 1 (Green) or Line 3 (Blue), both direct, no transfer, ~17-20 min, €1.20. SeaJets ferries depart from Gate E9, a 15-20 min walk from the metro station — be at the gate 30 min before departure. For a 9:00 AM ferry: be at the gate by 8:30 AM, leave the metro station by ~8:10 AM, catch the metro at Monastiraki by ~7:45-7:50 AM. Note: this metro line is a known pickpocket hotspot, especially during busy travel times." },
     { time: "4h 20m", text: "Journey time to Ios", booked: false },
     { time: "1:20 PM", text: "Arrive in Ios", booked: true, icon: "ferry", note: "Arrival at port of Ios. To reach hotel via bus or taxi right outside of port. Bus will cost €2.20 and taxi €10." },
@@ -60,16 +60,16 @@ const ITINERARY = [
     { time: "Sunset", text: "Panagia Gremiotissa Church for sunset", booked: false },
     { time: "9:30 PM", text: "Dinner at Katogi Greek Tapas", booked: false },
   ]},
-  { date: "Aug 28", day: "Thu", city: "ios", title: "Beach club day", items: [
+  { date: "Aug 28", city: "ios", title: "Beach club day", items: [
     { time: "Morning", text: "Mylopotas Beach", booked: false },
     { time: "6:00 PM", text: "Far Out Beach Club", booked: true },
   ]},
-  { date: "Aug 29", day: "Fri", city: "ios", title: "Manganari Beach & dinner", items: [
+  { date: "Aug 29", city: "ios", title: "Manganari Beach & dinner", items: [
     { time: "Morning", text: "Manganari Beach", booked: false },
     { time: "7:00 PM", text: "Ios Club — sunset dinner", booked: true, note: "Booking confirmed. Table AR2." },
     { time: "Late", text: "Pathos (optional, if up for it)", booked: false, note: "Taxi from Chora, ~5-7 min, roughly €5-8. No booking needed." },
   ]},
-  { date: "Aug 30", day: "Sat", city: "paros", title: "On to Paros", items: [
+  { date: "Aug 30", city: "paros", title: "On to Paros", items: [
     { time: "3:00 PM", text: "Ferry to Paros", booked: true, icon: "ferry" },
     { time: "55m", text: "Travel time", booked: false },
     { time: "4:00 PM", text: "Arrive at Paros port, check in", booked: true, icon: "ferry" },
@@ -77,14 +77,14 @@ const ITINERARY = [
     { time: "7:00 PM", text: "Lunaz — dinner (booked)", booked: true },
     { time: "Night", text: "Come Back cocktail bar", booked: false },
   ]},
-  { date: "Aug 31", day: "Sun", city: "paros", title: "Beach + shopping", items: [
+  { date: "Aug 31", city: "paros", title: "Beach + shopping", items: [
     { time: "", text: "Cabana Beach Club", booked: false },
     { time: "", text: "Shopping in Parikia", booked: false },
   ]},
-  { date: "Sep 1", day: "Mon", city: "paros", title: "Boat tour", items: [
+  { date: "Sep 1", city: "paros", title: "Boat tour", items: [
     { time: "3:30 PM", text: "Boat tour (4 hours)", booked: true, note: "Getting to Aliki from Naoussa — By bus (cheapest, slower): Naoussa → Parikia (~20 min, €2), change to Parikia → Aliki (~35 min, €2-3). Total with transfer: ~1h45m-1h55m. — By taxi (faster, pricier): direct, ~20-25 min, around €22-27 one-way." },
   ]},
-  { date: "Sep 2", day: "Tue", city: "budapest", title: "On to Budapest", items: [
+  { date: "Sep 2", city: "budapest", title: "On to Budapest", items: [
     { time: "10:40 AM", text: "Leave Paros (ferry to Athens)", booked: true, icon: "ferry", note: "Getting to Parikia (Paros Port) from Naoussa — By bus: direct, no transfer, ~20 min, €2-3. Runs roughly every 3 hours, so check timing against the ferry. By taxi: faster, ~11 min, €11-14 — safer bet given the ferry departure, less risk of cutting it close." },
     { time: "1:50 PM", text: "Arrival in Athens", booked: true, icon: "ferry" },
     { time: "6:15 PM", text: "Flight from Athens to Budapest", booked: true, icon: "flight", note: "Getting from Piraeus port to the airport — Metro (Blue Line 3, direct, no transfer): ~58 min-1 hr, €9pp, every ~30 min. X96 Express Bus (cheapest): ~1h30m, €6pp, every 20-30 min, 24/7. Taxi (fastest): ~40 min, €50-70. You land at 1:50 PM with a 6:15 PM flight, so there's comfortable buffer — metro is a solid, cheap option here." },
@@ -92,7 +92,7 @@ const ITINERARY = [
     { time: "", text: "Check in — Amber Terrace Studios Downtown", booked: true, note: "Address: Veres Pálné utca 7, District V (Belváros-Lipótváros), Budapest 1053." },
     { time: "Night", text: "Dinner near the Danube / harbour", booked: false },
   ]},
-  { date: "Sep 3", day: "Wed", city: "budapest", title: "Pest side highlights", items: [
+  { date: "Sep 3", city: "budapest", title: "Pest side highlights", items: [
     { time: "Morning", text: "Walking tour of the city", booked: false },
     { time: "", text: "St. Stephen's Basilica", booked: false },
     { time: "", text: "Gerbeaud Café", booked: false, note: "Historic café on Vörösmarty tér — a short walk from the Basilica, good spot for coffee/pastries during the walking tour." },
@@ -100,18 +100,18 @@ const ITINERARY = [
     { time: "5:45 PM", text: "Hungarian Parliament Building (booked)", booked: true },
     { time: "Night", text: "Szimpla Kert (ruin bar)", booked: false },
   ]},
-  { date: "Sep 4", day: "Thu", city: "budapest", title: "Buda side highlights", items: [
+  { date: "Sep 4", city: "budapest", title: "Buda side highlights", items: [
     { time: "", text: "Buda Castle", booked: false },
     { time: "", text: "Fisherman's Bastion", booked: false },
     { time: "8:30 PM", text: "Danube river cruise — Purpleliner (booked)", booked: true, note: "Meeting point: Batthyány tér, Dock 1/B." },
     { time: "Night", text: "White Raven Rooftop Bar", booked: false },
   ]},
-  { date: "Sep 5", day: "Fri", city: "budapest", title: "Sparty night", items: [
+  { date: "Sep 5", city: "budapest", title: "Sparty night", items: [
     { time: "Morning", text: "Chill day / shopping", booked: false },
     { time: "Evening", text: "High Note Rooftop Bar", booked: false },
     { time: "9:30 PM", text: "Sparty (booked)", booked: true },
   ]},
-  { date: "Sep 6", day: "Sat", city: "prague", title: "Side-trip tour: Budapest → Prague", items: [
+  { date: "Sep 6", city: "prague", title: "Side-trip tour: Budapest → Prague", items: [
     { time: "8:00 AM", text: "Leave Budapest — Side Trip Tour to Prague", booked: true, icon: "bus", note: "Meeting point is near Deák Ferenc tér metro station. 9-10 hour journey with stops along the way." },
     { time: "Stop 1", text: "Győr", booked: false },
     { time: "Stop 2", text: "Bratislava", booked: false },
@@ -119,7 +119,7 @@ const ITINERARY = [
     { time: "6–7 PM", text: "Arrive in Prague", booked: true, icon: "flight" },
     { time: "", text: "Check in — The Charles", booked: true },
   ]},
-  { date: "Sep 7", day: "Sun", city: "prague", title: "Old Town & river", items: [
+  { date: "Sep 7", city: "prague", title: "Old Town & river", items: [
     { time: "", text: "Old Town Square + Astronomical Clock", booked: false },
     { time: "", text: "Charles Bridge", booked: false },
     { time: "", text: "Wenceslas Square", booked: false },
@@ -128,46 +128,46 @@ const ITINERARY = [
     { time: "", text: "(A)void Café", booked: false, note: "Right underneath Dancing House on the riverside embankment (Náplavka). Known for its giant rotating porthole door." },
     { time: "Night", text: "Dog Bar", booked: false, note: "Multi-room nightlife spot near Charles Bridge — foosball, live music, quirky rooms, and a resident dog." },
   ]},
-  { date: "Sep 8", day: "Mon", city: "prague", title: "Castle side", items: [
+  { date: "Sep 8", city: "prague", title: "Castle side", items: [
     { time: "", text: "Prague Castle + St. Vitus Cathedral", booked: false },
     { time: "", text: "Lesser Town (Malá Strana)", booked: false },
     { time: "", text: "Petřín Hill / Lookout Tower", booked: false },
     { time: "Night", text: "Karlovy Lázně", booked: false, note: "Biggest club in Central Europe — 5 floors, each with a different music genre." },
   ]},
-  { date: "Sep 9", day: "Tue", city: "krumlov", title: "Last Prague morning → Krumlov", items: [
+  { date: "Sep 9", city: "krumlov", title: "Last Prague morning → Krumlov", items: [
     { time: "9:30 AM", text: "Taxi to Florenc Bus Station", booked: false, note: "From The Charles hotel, ~10-15 min by taxi, around 200-300 CZK. Alternative: metro — change trains once (Line A to Náměstí Republiky, then Line B to Florenc) and about a 10 min walk overall." },
     { time: "10:00 AM", text: "FlixBus to Český Krumlov", booked: true, icon: "bus", note: "Departs from Prague Florenc Central Bus Station. Journey time 3h15m." },
     { time: "1:15 PM", text: "Arrive in Český Krumlov", booked: true, icon: "bus" },
     { time: "", text: "Check in — Arcadie Hotel & Apartment", booked: true },
     { time: "Afternoon", text: "Wander the old town + castle grounds", booked: false },
   ]},
-  { date: "Sep 10", day: "Wed", city: "hallstatt", title: "Krumlov morning → Hallstatt", items: [
+  { date: "Sep 10", city: "hallstatt", title: "Krumlov morning → Hallstatt", items: [
     { time: "9:00 AM", text: "Pickup by private car from our hotel", booked: true, icon: "bus" },
     { time: "1:00 PM", text: "Arrive in Hallstatt", booked: true, icon: "bus" },
     { time: "", text: "Check in — Pension Bergfried", booked: true },
     { time: "Afternoon", text: "Lakeside walk through the village", booked: false },
   ]},
-  { date: "Sep 11", day: "Thu", city: "vienna", title: "Hallstatt morning → Vienna", items: [
+  { date: "Sep 11", city: "vienna", title: "Hallstatt morning → Vienna", items: [
     { time: "10:15 AM", text: "Ferry across the lake to the train station", booked: false, note: "The train station is on the opposite side of the lake, reached only by ferry. Walk to the town ferry dock (by the Evangelische Pfarrkirche, near Market Square). Crossing takes ~10-15 min, €4 one-way, cash only. Ferry timing is synced to the train." },
     { time: "11:09 AM", text: "Train REX 70 from Hallstatt train station", booked: true, icon: "bus", note: "Catch REX 70 from Platform 1 in Hallstatt. Arrive in Attnang on Platform 1, then go to Platform 2 to catch IC 645." },
     { time: "3:00 PM", text: "Arrive in Vienna", booked: true, icon: "bus", note: "Getting to the hotel: taxi from Wien Hauptbahnhof, roughly 15-20 min, around €15-20." },
     { time: "", text: "Check in — Four Points Flex by Sheraton Vienna Mariahilf", booked: true },
     { time: "Evening", text: "Stroll the Innere Stadt", booked: false },
   ]},
-  { date: "Sep 12", day: "Fri", city: "vienna", title: "Palaces & markets", items: [
+  { date: "Sep 12", city: "vienna", title: "Palaces & markets", items: [
     { time: "", text: "Schönbrunn Palace", booked: false },
     { time: "", text: "Naschmarkt", booked: false },
   ]},
-  { date: "Sep 13", day: "Sat", city: "vienna", title: "Cathedral & art", items: [
+  { date: "Sep 13", city: "vienna", title: "Cathedral & art", items: [
     { time: "", text: "St. Stephen's Cathedral", booked: false },
     { time: "", text: "Belvedere Palace", booked: false },
     { time: "", text: "Graben shopping street", booked: false },
   ]},
-  { date: "Sep 14", day: "Sun", city: "vienna", title: "Free day", items: [
+  { date: "Sep 14", city: "vienna", title: "Free day", items: [
     { time: "", text: "Vienna State Opera / last-minute shopping", booked: false },
     { time: "", text: "Pack up", booked: false },
   ]},
-  { date: "Sep 15", day: "Mon", city: null, title: "Fly home", items: [
+  { date: "Sep 15", city: null, title: "Fly home", items: [
     { time: "", text: "Flight back to Sydney", booked: true, icon: "flight" },
   ]},
 ];
@@ -850,6 +850,20 @@ export default function App() {
     }));
   };
 
+  const [reminders, setReminders] = useState(() => loadFromStorage("europe-trip-reminders") || []);
+  useEffect(() => {
+    saveToStorage("europe-trip-reminders", reminders);
+  }, [reminders]);
+  const addReminder = (reminder) => {
+    setReminders((prev) => [...prev, { ...reminder, id: `rem-${Date.now()}`, addedToCalendar: false }]);
+  };
+  const removeReminder = (id) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id));
+  };
+  const markReminderAdded = (id) => {
+    setReminders((prev) => prev.map((r) => (r.id === id ? { ...r, addedToCalendar: true } : r)));
+  };
+
   const addExpense = (entry) => {
     setBudget((prev) => [...prev, { ...entry, id: Date.now().toString() }]);
   };
@@ -1013,6 +1027,14 @@ export default function App() {
                   onRemoveIdea={removeCrossCityIdea}
                   onAddPerCityIdea={addPerCityIdea}
                   onRemovePerCityIdea={removePerCityIdea}
+                />
+              )}
+              {tab === "reminders" && (
+                <RemindersTab
+                  reminders={reminders}
+                  onAdd={addReminder}
+                  onRemove={removeReminder}
+                  onMarkAdded={markReminderAdded}
                 />
               )}
               {activeCity && (
@@ -1549,6 +1571,7 @@ const TOOL_DEFS = [
   { id: "docs", label: "Docs", icon: FileText, color: "var(--cat-transport)" },
   { id: "ask", label: "Ask", icon: MessageCircle, color: "var(--cat-shopping)" },
   { id: "reels", label: "Reels", icon: Clapperboard, color: "var(--cat-other)" },
+  { id: "reminders", label: "Reminders", icon: Bell, color: "var(--stamp)" },
 ];
 
 function TabBar({ tab, setTab }) {
@@ -1720,7 +1743,9 @@ function OverviewTab({ checklist, toggleCheck }) {
                   <div className="px-4 py-2.5" style={{ background: city ? city.accent + "14" : "transparent" }}>
                     <div className="flex items-baseline justify-between gap-2">
                       <div className="flex items-baseline gap-2">
-                        <span className="font-mono text-xs text-[var(--text-muted)]">{day.day}</span>
+                        <span className="font-mono text-xs text-[var(--text-muted)]">
+                          {parseTripDate(day.date).toLocaleDateString(undefined, { weekday: "short" })}
+                        </span>
                         <span
                           className="font-display text-lg font-700"
                           style={{ fontWeight: 700, color: city ? city.accent : "var(--text-primary)" }}
@@ -2043,7 +2068,9 @@ function CityTab({ city, checklist, toggleCheck }) {
           {days.map((d, idx) => (
             <div key={idx} className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3">
               <div className="flex items-baseline gap-2 mb-1">
-                <span className="font-mono text-xs text-[var(--text-muted)]">{d.day}</span>
+                <span className="font-mono text-xs text-[var(--text-muted)]">
+                  {parseTripDate(d.date).toLocaleDateString(undefined, { weekday: "short" })}
+                </span>
                 <span className="font-display font-600 text-sm" style={{ fontWeight: 600 }}>{d.date}</span>
                 <span className="text-xs text-[var(--text-secondary)]">— {d.title}</span>
               </div>
@@ -3206,6 +3233,231 @@ function ReelsTab({
         onAddIdea={onAddPerCityIdea}
         onRemoveIdea={onRemovePerCityIdea}
       />
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   REMINDERS (phone calendar reminders via .ics)
+--------------------------------------------------------------- */
+
+const SUGGESTED_REMINDERS = [
+  {
+    label: "Ferry check-in — Athens → Ios",
+    title: "Ferry check-in — Athens → Ios (SeaJets, Gate E9)",
+    date: "2026-08-27",
+    time: "08:30",
+    notes:
+      "Be at Gate E9 (Piraeus) by 8:30 AM for the 9:00 AM SeaJets ferry. Leave Monastiraki via Metro Line 1 or 3 by ~7:45–7:50 AM — it's a 15–20 min walk from the metro to the gate.",
+  },
+  {
+    label: "Ferry check-in — Ios → Paros",
+    title: "Ferry check-in — Ios → Paros",
+    date: "2026-08-30",
+    time: "14:00",
+    notes: "Ferry to Paros departs Ios port at 3:00 PM — aim to be at the port by 2:00 PM.",
+  },
+];
+
+const ALARM_OPTIONS = [
+  { label: "At the time", value: "PT0S" },
+  { label: "15 minutes before", value: "-PT15M" },
+  { label: "30 minutes before", value: "-PT30M" },
+  { label: "1 hour before", value: "-PT1H" },
+  { label: "2 hours before", value: "-PT2H" },
+  { label: "1 day before", value: "-P1D" },
+];
+
+function escapeICSText(str) {
+  return String(str || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+function buildICS(reminder) {
+  const dtStart = `${reminder.date.replace(/-/g, "")}T${reminder.time.replace(":", "")}00`;
+  const [h, m] = reminder.time.split(":").map(Number);
+  const endMinutes = h * 60 + m + 30;
+  const endH = String(Math.floor(endMinutes / 60) % 24).padStart(2, "0");
+  const endM = String(endMinutes % 60).padStart(2, "0");
+  const dtEnd = `${reminder.date.replace(/-/g, "")}T${endH}${endM}00`;
+  const dtStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//europe-trip-app//reminders//EN",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${reminder.id}@europe-trip-app`,
+    `DTSTAMP:${dtStamp}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `SUMMARY:${escapeICSText(reminder.title)}`,
+    reminder.notes ? `DESCRIPTION:${escapeICSText(reminder.notes)}` : null,
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${escapeICSText(reminder.title)}`,
+    `TRIGGER:${reminder.alarm || "-PT30M"}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+}
+
+function downloadICS(reminder) {
+  const ics = buildICS(reminder);
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${reminder.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase().slice(0, 60) || "reminder"}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function formatReminderWhen(reminder) {
+  const dt = new Date(`${reminder.date}T${reminder.time}:00`);
+  const dateStr = dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const timeStr = dt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${dateStr} · ${timeStr}`;
+}
+
+function RemindersTab({ reminders, onAdd, onRemove, onMarkAdded }) {
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [notes, setNotes] = useState("");
+  const [alarm, setAlarm] = useState("-PT30M");
+
+  const applySuggestion = (s) => {
+    setTitle(s.title);
+    setDate(s.date);
+    setTime(s.time);
+    setNotes(s.notes);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title.trim() || !date || !time) return;
+    onAdd({ title: title.trim(), date, time, notes: notes.trim(), alarm });
+    setTitle("");
+    setDate("");
+    setTime("");
+    setNotes("");
+  };
+
+  const sorted = [...reminders].sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+
+  return (
+    <div>
+      <p className="text-sm text-[var(--text-secondary)] mb-4">
+        Set a reminder here and add it to your phone's own calendar — it'll notify you like any other calendar
+        event, even with the app closed.
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-5">
+        {SUGGESTED_REMINDERS.map((s) => (
+          <button
+            key={s.label}
+            onClick={() => applySuggestion(s)}
+            className="text-[12px] font-medium px-3 py-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--stamp)] hover:text-[var(--stamp)] transition-colors"
+          >
+            + {s.label}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mb-6 space-y-3">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="What's the reminder?"
+          className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--stamp)]"
+        />
+        <div className="flex gap-2">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--stamp)]"
+          />
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--stamp)]"
+          />
+        </div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Notes (optional)"
+          rows={2}
+          className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--stamp)] resize-none"
+        />
+        <select
+          value={alarm}
+          onChange={(e) => setAlarm(e.target.value)}
+          className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--stamp)]"
+        >
+          {ALARM_OPTIONS.map((a) => (
+            <option key={a.value} value={a.value}>
+              Remind me {a.label.toLowerCase()}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="w-full bg-[var(--stamp)] text-white rounded-xl py-2.5 text-sm font-semibold hover:scale-[1.01] active:scale-[0.99] transition-transform"
+        >
+          Create reminder
+        </button>
+      </form>
+
+      {sorted.length > 0 && (
+        <div className="space-y-2.5">
+          {sorted.map((r) => (
+            <div key={r.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">{r.title}</div>
+                  <div className="font-mono text-[11px] text-[var(--stamp)] mt-0.5">{formatReminderWhen(r)}</div>
+                  {r.notes && <div className="text-[12px] text-[var(--text-secondary)] mt-1">{r.notes}</div>}
+                </div>
+                <button
+                  onClick={() => onRemove(r.id)}
+                  aria-label={`Remove ${r.title}`}
+                  className="text-[var(--text-faint)] hover:text-[var(--stamp)] transition-colors shrink-0"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  downloadICS(r);
+                  onMarkAdded(r.id);
+                }}
+                className="flex items-center gap-1.5 mt-3 text-[12px] font-medium px-3 py-1.5 rounded-full border transition-colors"
+                style={
+                  r.addedToCalendar
+                    ? { borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--bg)" }
+                    : { borderColor: "var(--stamp)", color: "var(--stamp)", background: "var(--stamp)" + "12" }
+                }
+              >
+                <CalendarPlus size={13} />
+                {r.addedToCalendar ? "Added — tap to add again" : "Add to phone calendar"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

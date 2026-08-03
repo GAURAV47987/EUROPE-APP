@@ -110,6 +110,14 @@ Vite + React + Tailwind app.
   of you type into these boxes currently save to that device only —
   they're not yet synced to the paired phone the way budget/checklist
   progress is.
+- **Reminders** — set a reminder (title, date, time, optional notes,
+  and how far ahead to alert) and it generates a real `.ics` calendar
+  file that gets added to your phone's own Calendar app — a genuine OS
+  notification, no backend or push-notification setup required. Comes
+  with two quick-add suggestions pre-filled from the actual itinerary
+  (the Athens→Ios and Ios→Paros ferry check-ins). No server, so nothing
+  to keep alive — each person adds reminders straight to their own
+  phone's calendar.
 - **Documents** — upload tickets, passport scans, and booking
   confirmations (images or PDFs, up to 20MB) once paired via sync; view
   or delete them from either synced device. Stored in a private Supabase
