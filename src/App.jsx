@@ -1272,6 +1272,45 @@ function SwipeToEnter({ onEnter }) {
    HOME SCREEN
 --------------------------------------------------------------- */
 
+const HOME_BACKDROP_STAMPS = [
+  { cityIdx: 0, x: 55, y: 75, r: 46, rot: -12 },
+  { cityIdx: 2, x: 330, y: 55, r: 36, rot: 9 },
+  { cityIdx: 4, x: 20, y: 400, r: 40, rot: 14 },
+  { cityIdx: 6, x: 355, y: 420, r: 44, rot: -8 },
+  { cityIdx: 1, x: 45, y: 690, r: 38, rot: 10 },
+  { cityIdx: 7, x: 330, y: 705, r: 50, rot: -14 },
+];
+
+function HomeScreenBackdrop() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 380 760"
+      preserveAspectRatio="xMidYMid slice"
+      style={{ opacity: 0.16 }}
+    >
+      <path
+        d="M -30 660 C 70 560, 30 440, 150 420 S 300 300, 260 190 S 340 60, 420 -30"
+        fill="none"
+        stroke="var(--text-faint)"
+        strokeWidth="2"
+        strokeDasharray="1 11"
+        strokeLinecap="round"
+      />
+      {HOME_BACKDROP_STAMPS.map((s, i) => {
+        const city = CITIES[s.cityIdx];
+        return (
+          <g key={i} transform={`translate(${s.x} ${s.y}) rotate(${s.rot})`}>
+            <circle r={s.r} fill="none" stroke={city.accent} strokeWidth="2.4" strokeDasharray="4.5 4.5" />
+            <circle r={s.r - 8} fill="none" stroke={city.accent} strokeWidth="1.4" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 function HomeScreen({ onEnter, folding, onFoldEnd }) {
   const now = useLiveClock();
   const status = getTripStatus();
@@ -1281,11 +1320,12 @@ function HomeScreen({ onEnter, folding, onFoldEnd }) {
   return (
     <div className="fixed inset-0 z-50" style={{ perspective: "1400px" }}>
       <div
-        className={`home-screen w-full h-full bg-[var(--bg)] flex flex-col items-center justify-center px-6 overflow-y-auto ${folding ? "home-folding" : ""}`}
+        className={`home-screen relative w-full h-full bg-[var(--bg)] flex flex-col items-center justify-center px-6 overflow-y-auto ${folding ? "home-folding" : ""}`}
         onAnimationEnd={(e) => {
           if (e.animationName === "foldAway") onFoldEnd?.();
         }}
       >
+      <HomeScreenBackdrop />
       <div
         aria-hidden="true"
         className="absolute top-6 right-6 w-[68px] h-[68px] rounded-full flex items-center justify-center text-center pointer-events-none"
@@ -1303,7 +1343,7 @@ function HomeScreen({ onEnter, folding, onFoldEnd }) {
         SYD ⇄ ATH
         <br />★ 2026 ★
       </div>
-      <div className="w-full max-w-sm py-12 flex flex-col items-center text-center gap-8">
+      <div className="relative z-10 w-full max-w-sm py-12 flex flex-col items-center text-center gap-8">
         <div>
           <div className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.3em] text-[var(--text-muted)] font-mono mb-3">
             <Plane size={12} strokeWidth={2} />
