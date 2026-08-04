@@ -1364,11 +1364,20 @@ function HomeScreen({ onEnter, folding, onFoldEnd }) {
           <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-px bg-[var(--border)]" />
           <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-px route-glow" />
           {CITIES.map((c) => (
-            <span
-              key={c.id}
-              className="relative z-10 w-2.5 h-2.5 rounded-full ring-4 ring-[var(--bg)]"
-              style={{ background: c.accent, boxShadow: `0 0 10px ${c.accent}99` }}
-            />
+            <svg key={c.id} viewBox="0 0 48 48" width="34" height="34" className="relative z-10 shrink-0">
+              <g transform="translate(24 24)">
+                <StampMark
+                  accent={c.accent}
+                  code={c.name.slice(0, 3).toUpperCase()}
+                  rOuter={20}
+                  rInner={15}
+                  fontSize={13}
+                  strokeOuter={2}
+                  strokeInner={1.2}
+                  dash="3 3"
+                />
+              </g>
+            </svg>
           ))}
         </div>
 
@@ -1619,6 +1628,18 @@ function TabBar({ tab, setTab }) {
   return isHub ? <HubNav tab={tab} setTab={setTab} /> : <ToolPageHeader tab={tab} setTab={setTab} />;
 }
 
+function StampMark({ accent, code, rOuter = 24, rInner = 19, fontSize = 16, strokeOuter = 2.2, strokeInner = 1.4, dash = "3.6 3.2" }) {
+  return (
+    <>
+      <circle r={rOuter} fill="none" stroke={accent} strokeWidth={strokeOuter} strokeDasharray={dash} />
+      <circle r={rInner} fill="none" stroke={accent} strokeWidth={strokeInner} />
+      <text textAnchor="middle" dominantBaseline="central" className="font-mono" fontSize={fontSize} fontWeight="700" fill={accent}>
+        {code}
+      </text>
+    </>
+  );
+}
+
 const HERO_VB_W = 760;
 const HERO_VB_H = 132;
 const HERO_STOP_Y = [50, 86, 46, 92, 42, 90, 48, 70];
@@ -1668,18 +1689,7 @@ function HomeHero() {
           />
           {HERO_STOPS.map((s, i) => (
             <g key={s.id} transform={`translate(${s.x} ${s.y}) rotate(${i % 2 === 0 ? -7 : 7})`}>
-              <circle r="24" fill="none" stroke={s.accent} strokeWidth="2.2" strokeDasharray="3.6 3.2" />
-              <circle r="19" fill="none" stroke={s.accent} strokeWidth="1.4" />
-              <text
-                textAnchor="middle"
-                dominantBaseline="central"
-                className="font-mono"
-                fontSize="16"
-                fontWeight="700"
-                fill={s.accent}
-              >
-                {s.name.slice(0, 3).toUpperCase()}
-              </text>
+              <StampMark accent={s.accent} code={s.name.slice(0, 3).toUpperCase()} />
             </g>
           ))}
         </svg>
