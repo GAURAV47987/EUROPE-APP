@@ -1579,9 +1579,91 @@ function TabBar({ tab, setTab }) {
   return isHub ? <HubNav tab={tab} setTab={setTab} /> : <ToolPageHeader tab={tab} setTab={setTab} />;
 }
 
+const HERO_VB_W = 760;
+const HERO_VB_H = 132;
+const HERO_STOP_Y = [50, 86, 46, 92, 42, 90, 48, 70];
+
+const HERO_STOPS = CITIES.map((c, i) => ({
+  id: c.id,
+  name: c.name,
+  accent: c.accent,
+  x: 36 + i * ((HERO_VB_W - 72) / (CITIES.length - 1)),
+  y: HERO_STOP_Y[i % HERO_STOP_Y.length],
+}));
+
+function buildWavePath(stops) {
+  let d = `M ${stops[0].x} ${stops[0].y}`;
+  for (let i = 1; i < stops.length; i++) {
+    const prev = stops[i - 1];
+    const cur = stops[i];
+    const dx = (cur.x - prev.x) / 2;
+    d += ` C ${prev.x + dx} ${prev.y}, ${cur.x - dx} ${cur.y}, ${cur.x} ${cur.y}`;
+  }
+  return d;
+}
+
+function HomeHero() {
+  const status = useMemo(() => getTripStatus(), []);
+  const pathD = useMemo(() => buildWavePath(HERO_STOPS), []);
+
+  let planeIndex = 0;
+  if (status.phase === "after") planeIndex = HERO_STOPS.length - 1;
+  else if (status.phase === "during" && status.cityName) {
+    const idx = HERO_STOPS.findIndex((s) => s.name === status.cityName);
+    planeIndex = idx >= 0 ? idx : 0;
+  }
+  const planeStop = HERO_STOPS[planeIndex];
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 pt-1 pb-3">
+      <div className="relative rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-2 pt-4 pb-1">
+        <svg viewBox={`0 0 ${HERO_VB_W} ${HERO_VB_H}`} className="w-full h-auto block" preserveAspectRatio="xMidYMid meet">
+          <path
+            d={pathD}
+            fill="none"
+            stroke="var(--text-faint)"
+            strokeWidth="1.5"
+            strokeDasharray="1 7"
+            strokeLinecap="round"
+          />
+          {HERO_STOPS.map((s, i) => (
+            <g key={s.id} transform={`translate(${s.x} ${s.y}) rotate(${i % 2 === 0 ? -7 : 7})`}>
+              <circle r="24" fill="none" stroke={s.accent} strokeWidth="2.2" strokeDasharray="3.6 3.2" />
+              <circle r="19" fill="none" stroke={s.accent} strokeWidth="1.4" />
+              <text
+                textAnchor="middle"
+                dominantBaseline="central"
+                className="font-mono"
+                fontSize="16"
+                fontWeight="700"
+                fill={s.accent}
+              >
+                {s.name.slice(0, 3).toUpperCase()}
+              </text>
+            </g>
+          ))}
+        </svg>
+        <div
+          className="absolute flex items-center justify-center w-8 h-8 rounded-full text-white"
+          style={{
+            background: "var(--stamp)",
+            left: `${(planeStop.x / HERO_VB_W) * 100}%`,
+            top: `${(planeStop.y / HERO_VB_H) * 100}%`,
+            transform: "translate(-50%, -55%) rotate(20deg)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+          }}
+        >
+          <Plane size={16} strokeWidth={2.5} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HubNav({ tab, setTab }) {
   return (
     <div className="border-b border-[var(--border)]">
+      <HomeHero />
       {/* Cities rail — visually distinct band, its own horizontal scroll */}
       <div className="bg-[var(--surface)] border-b border-[var(--border)]">
         <div className="max-w-3xl mx-auto px-4 flex items-center gap-1.5 overflow-x-auto scrollbar-thin py-2">
