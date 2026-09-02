@@ -2357,6 +2357,7 @@ function SmartAddModal({ onClose, onParsed }) {
 function BudgetTab({ budget, addExpense, removeExpense }) {
   const [showForm, setShowForm] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [form, setForm] = useState({
     description: "", amount: "", currency: "AUD", category: "Activities", city: "",
   });
@@ -2410,6 +2411,11 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
     setShowForm(false);
   };
 
+  const visibleExpenses = useMemo(() => {
+    const reversed = [...budget].reverse();
+    return selectedCategory ? reversed.filter((e) => e.category === selectedCategory) : reversed;
+  }, [budget, selectedCategory]);
+
   return (
     <div>
       {Object.keys(totals).length > 0 && (
@@ -2444,10 +2450,21 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
             {sortedCategories.map((cat) => {
               const amt = categoryTotals[cat];
               const pct = maxCategoryTotal > 0 ? (amt / maxCategoryTotal) * 100 : 0;
+              const active = selectedCategory === cat;
               return (
-                <div key={cat}>
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(active ? null : cat)}
+                  className="w-full text-left rounded-lg -mx-1 px-1 py-0.5 transition-colors"
+                  style={active ? { background: CATEGORY_COLOR_VAR[cat] + "18" } : undefined}
+                >
                   <div className="flex items-baseline justify-between mb-1 gap-2">
-                    <span className="text-sm text-[var(--text-tertiary)]">{cat}</span>
+                    <span
+                      className="text-sm"
+                      style={{ color: active ? CATEGORY_COLOR_VAR[cat] : "var(--text-tertiary)", fontWeight: active ? 600 : 400 }}
+                    >
+                      {cat}
+                    </span>
                     <span className="font-mono text-xs text-[var(--text-muted)] shrink-0">
                       ≈${amt.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </span>
@@ -2458,7 +2475,7 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
                       style={{ width: `${pct}%`, background: CATEGORY_COLOR_VAR[cat] }}
                     />
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -2482,8 +2499,18 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
 
       {smartOpen && <SmartAddModal onClose={() => setSmartOpen(false)} onParsed={applyParsed} />}
 
+      {selectedCategory && (
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className="flex items-center gap-1.5 mb-3 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors"
+          style={{ borderColor: CATEGORY_COLOR_VAR[selectedCategory], color: CATEGORY_COLOR_VAR[selectedCategory], background: CATEGORY_COLOR_VAR[selectedCategory] + "14" }}
+        >
+          Showing: {selectedCategory} <X size={13} />
+        </button>
+      )}
+
       <div className="space-y-2">
-        {[...budget].reverse().map((e) => (
+        {visibleExpenses.map((e) => (
           <div key={e.id} className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-3 py-2.5 flex items-center justify-between">
             <div className="min-w-0">
               <div className="text-sm font-medium text-[var(--text-primary)] truncate">{e.description}</div>

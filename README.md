@@ -26,7 +26,9 @@ Vite + React + Tailwind app.
   category, and city; running totals per currency, plus a combined
   "Total (≈ AUD)" card that converts every currency logged (AUD, EUR,
   HUF, CZK, USD) into one grand total using the same rates as the
-  category breakdown below it.
+  category breakdown below it. Tapping a category in that breakdown
+  filters the expense list to just that category — tap it again (or
+  the "Showing: ___" chip) to clear the filter.
 - **Currency converter** — convert between AUD/EUR/HUF/CZK/USD, plus a
   quick-reference table of common amounts converted to AUD. Fetches live
   rates from a CDN-hosted rate feed when online and caches the last known
