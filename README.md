@@ -23,7 +23,10 @@ Vite + React + Tailwind app.
   ~16-day forecast horizon, cached for a few hours; otherwise falls back
   to the static seasonal estimate.
 - **Budget tracker** — log expenses by description, amount, currency,
-  category, and city; running totals per currency.
+  category, and city; running totals per currency, plus a combined
+  "Total (≈ AUD)" card that converts every currency logged (AUD, EUR,
+  HUF, CZK, USD) into one grand total using the same rates as the
+  category breakdown below it.
 - **Currency converter** — convert between AUD/EUR/HUF/CZK/USD, plus a
   quick-reference table of common amounts converted to AUD. Fetches live
   rates from a CDN-hosted rate feed when online and caches the last known

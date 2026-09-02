@@ -2398,6 +2398,10 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
     [categoryTotals]
   );
   const maxCategoryTotal = Math.max(0, ...Object.values(categoryTotals));
+  const totalAUD = useMemo(
+    () => Object.values(categoryTotals).reduce((sum, v) => sum + v, 0),
+    [categoryTotals]
+  );
 
   const submit = () => {
     if (!form.description || !form.amount) return;
@@ -2408,6 +2412,16 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
 
   return (
     <div>
+      {Object.keys(totals).length > 0 && (
+        <div className="rounded-2xl p-4 mb-2.5 text-white" style={{ background: "var(--stamp)" }}>
+          <div className="font-mono text-[11px] uppercase tracking-widest opacity-80">Total (≈ AUD)</div>
+          <div className="font-display text-3xl font-700" style={{ fontWeight: 700 }}>
+            ${totalAUD.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+          <div className="text-[11px] opacity-80 mt-0.5">Every currency below, converted at the latest rate</div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-2 mb-5">
         {Object.keys(totals).length === 0 && (
           <div className="col-span-2 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--text-muted)] text-center">
