@@ -4,7 +4,7 @@ import {
   CheckCircle2, Circle, Plus, Trash2, ChevronRight, ChevronLeft, Clock,
   Ticket, Sparkles, X, Landmark, ArrowLeftRight, RefreshCw, Luggage,
   Sun, Moon, Link2, CloudCheck, CloudAlert, FileText, Upload, Image, Eye,
-  Camera, MessageCircle, LayoutGrid, Clapperboard, Bell, CalendarPlus
+  Camera, MessageCircle, LayoutGrid, Clapperboard, Bell, CalendarPlus, Printer
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -916,13 +916,18 @@ export default function App() {
   const activeCity = CITIES.find((c) => c.id === tab);
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif" }} className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
+    <div style={{ fontFamily: "'Inter', sans-serif" }} className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] print:bg-white print:text-black">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .scrollbar-thin::-webkit-scrollbar { height: 6px; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+
+        @media print {
+          @page { margin: 14mm; }
+          body { background: #fff !important; }
+        }
 
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(6px); }
@@ -990,7 +995,7 @@ export default function App() {
 
       {homePhase !== "home" && (
         <>
-          <div className="sticky top-0 z-20 bg-[var(--bg)]">
+          <div className="sticky top-0 z-20 bg-[var(--bg)] print:hidden">
             <div className="bg-[var(--surface)]" style={{ boxShadow: "0 2px 6px rgba(0,0,0,.06)" }}>
               <Header
                 saveState={saveState}
@@ -2429,7 +2434,8 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
   }, [budget, selectedCategory]);
 
   return (
-    <div>
+    <>
+    <div className="print:hidden">
       {Object.keys(totals).length > 0 && (
         <div className="rounded-2xl p-4 mb-2.5 text-white" style={{ background: "var(--stamp)" }}>
           <div className="font-mono text-[11px] uppercase tracking-widest opacity-80">Total (≈ AUD)</div>
@@ -2455,6 +2461,15 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
           </div>
         ))}
       </div>
+
+      {budget.length > 0 && (
+        <button
+          onClick={() => window.print()}
+          className="w-full flex items-center justify-center gap-2 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl py-3 text-sm font-medium mb-5 hover:scale-[1.01] active:scale-[0.99] transition-transform"
+        >
+          <Printer size={16} /> Export as PDF
+        </button>
+      )}
 
       {sortedCategories.length > 0 && (
         <Section icon={<Wallet size={15} />} title="By category (≈ AUD)" accent="var(--text-primary)">
@@ -2616,6 +2631,83 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
         </div>
       )}
     </div>
+
+    <div className="hidden print:block" style={{ color: "#000", background: "#fff" }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 2 }}>Europe & Greek Islands — Budget Summary</h1>
+      <p style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>
+        Generated {new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+      </p>
+
+      <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+        Total: ${totalAUD.toLocaleString(undefined, { maximumFractionDigits: 0 })} AUD (approx., latest conversion rates)
+      </h2>
+
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, marginBottom: 16 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #000", padding: "4px 6px" }}>Currency</th>
+            <th style={{ textAlign: "right", borderBottom: "1px solid #000", padding: "4px 6px" }}>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(totals).map(([cur, amt]) => (
+            <tr key={cur}>
+              <td style={{ padding: "4px 6px", borderBottom: "1px solid #ddd" }}>{cur}</td>
+              <td style={{ textAlign: "right", padding: "4px 6px", borderBottom: "1px solid #ddd" }}>
+                {CURRENCY_SYMBOL[cur]}{amt.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>By Category (≈ AUD)</h2>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, marginBottom: 16 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #000", padding: "4px 6px" }}>Category</th>
+            <th style={{ textAlign: "right", borderBottom: "1px solid #000", padding: "4px 6px" }}>Total (AUD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedCategories.map((cat) => (
+            <tr key={cat}>
+              <td style={{ padding: "4px 6px", borderBottom: "1px solid #ddd" }}>{cat}</td>
+              <td style={{ textAlign: "right", padding: "4px 6px", borderBottom: "1px solid #ddd" }}>
+                ${categoryTotals[cat].toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>All Expenses ({budget.length})</h2>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10.5 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #000", padding: "4px 6px" }}>Description</th>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #000", padding: "4px 6px" }}>Category</th>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #000", padding: "4px 6px" }}>City</th>
+            <th style={{ textAlign: "right", borderBottom: "1px solid #000", padding: "4px 6px" }}>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...budget].reverse().map((e) => (
+            <tr key={e.id}>
+              <td style={{ padding: "4px 6px", borderBottom: "1px solid #eee" }}>{e.description}</td>
+              <td style={{ padding: "4px 6px", borderBottom: "1px solid #eee" }}>{e.category}</td>
+              <td style={{ padding: "4px 6px", borderBottom: "1px solid #eee" }}>
+                {CITIES.find((c) => c.id === e.city)?.name || "—"}
+              </td>
+              <td style={{ textAlign: "right", padding: "4px 6px", borderBottom: "1px solid #eee" }}>
+                {CURRENCY_SYMBOL[e.currency]}{parseFloat(e.amount).toLocaleString()} {e.currency}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    </>
   );
 }
 
