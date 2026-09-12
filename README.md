@@ -28,10 +28,12 @@ Vite + React + Tailwind app.
   HUF, CZK, USD) into one grand total using the same rates as the
   category breakdown below it. Tapping a category in that breakdown
   filters the expense list to just that category — tap it again (or
-  the "Showing: ___" chip) to clear the filter. "Export as PDF" opens
-  the phone's native print dialog with a clean black-on-white summary
-  (totals, category breakdown, full expense list) — pick "Save as PDF"
-  from there. No library or backend involved, just a print stylesheet.
+  the "Showing: ___" chip) to clear the filter. "Export as PDF"
+  generates a real PDF client-side (jsPDF + jspdf-autotable) — totals,
+  category breakdown, full expense list — and downloads it directly.
+  Deliberately not `window.print()`: that has no browser chrome to
+  render a print dialog in, and silently does nothing, when the app
+  is installed as a standalone PWA (confirmed on iOS).
 - **Currency converter** — convert between AUD/EUR/HUF/CZK/USD, plus a
   quick-reference table of common amounts converted to AUD. Fetches live
   rates from a CDN-hosted rate feed when online and caches the last known
