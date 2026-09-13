@@ -1024,7 +1024,12 @@ export default function App() {
                 <OverviewTab checklist={checklist} toggleCheck={toggleCheck} />
               )}
               {tab === "budget" && (
-                <BudgetTab budget={budget} addExpense={addExpense} removeExpense={removeExpense} />
+                <BudgetTab
+                  budget={budget}
+                  addExpense={addExpense}
+                  removeExpense={removeExpense}
+                  updateExpense={updateExpense}
+                />
               )}
               {tab === "convert" && <ConverterTab />}
               {tab === "pack" && <PackingTab checklist={checklist} toggleCheck={toggleCheck} />}
@@ -2371,10 +2376,11 @@ function SmartAddModal({ onClose, onParsed }) {
    BUDGET TAB
 --------------------------------------------------------------- */
 
-function BudgetTab({ budget, addExpense, removeExpense }) {
+function BudgetTab({ budget, addExpense, removeExpense, updateExpense }) {
   const [showForm, setShowForm] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     description: "", amount: "", currency: "AUD", category: "Activities", city: "",
   });
@@ -2387,8 +2393,26 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
       category: parsed.category || "Activities",
       city: parsed.city || "",
     });
+    setEditingId(null);
     setSmartOpen(false);
     setShowForm(true);
+  };
+
+  const openEdit = (expense) => {
+    setForm({
+      description: expense.description,
+      amount: String(expense.amount),
+      currency: expense.currency,
+      category: expense.category,
+      city: expense.city || "",
+    });
+    setEditingId(expense.id);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
   };
 
   const totals = useMemo(() => {
@@ -2423,8 +2447,13 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
 
   const submit = () => {
     if (!form.description || !form.amount) return;
-    addExpense(form);
+    if (editingId) {
+      updateExpense(editingId, form);
+    } else {
+      addExpense(form);
+    }
     setForm({ description: "", amount: "", currency: form.currency, category: form.category, city: "" });
+    setEditingId(null);
     setShowForm(false);
   };
 
@@ -2571,7 +2600,11 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
       </button>
 
       <button
-        onClick={() => setShowForm(true)}
+        onClick={() => {
+          setForm({ description: "", amount: "", currency: "AUD", category: "Activities", city: "" });
+          setEditingId(null);
+          setShowForm(true);
+        }}
         className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-4 text-base font-bold mb-5 shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-transform"
         style={{ background: "linear-gradient(135deg, #E0703C, #C9463F)", boxShadow: "0 4px 14px rgba(224,112,60,0.5)" }}
       >
@@ -2592,7 +2625,11 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
 
       <div className="space-y-2">
         {visibleExpenses.map((e) => (
-          <div key={e.id} className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-3 py-2.5 flex items-center justify-between">
+          <button
+            key={e.id}
+            onClick={() => openEdit(e)}
+            className="w-full text-left bg-[var(--surface)] rounded-xl border border-[var(--border)] px-3 py-2.5 flex items-center justify-between hover:border-[var(--text-faint)] active:scale-[0.99] transition-[transform,border-color]"
+          >
             <div className="min-w-0">
               <div className="text-sm font-medium text-[var(--text-primary)] truncate">{e.description}</div>
               <div className="text-[11px] text-[var(--text-muted)] font-mono">
@@ -2603,30 +2640,37 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
               <span className="font-mono text-sm font-medium">
                 {CURRENCY_SYMBOL[e.currency]}{parseFloat(e.amount).toLocaleString()}
               </span>
-              <button
-                onClick={() => removeExpense(e.id)}
+              <span
+                role="button"
+                aria-label={`Delete ${e.description}`}
+                onClick={(evt) => {
+                  evt.stopPropagation();
+                  removeExpense(e.id);
+                }}
                 className="text-[#c9463f] hover:scale-110 active:scale-90 transition-transform"
               >
                 <Trash2 size={15} />
-              </button>
+              </span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
       {showForm && (
         <div
           className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50 modal-backdrop"
-          onClick={() => setShowForm(false)}
+          onClick={closeForm}
         >
           <div
             className="bg-[var(--bg)] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 space-y-3 modal-panel"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="font-display font-700 text-lg" style={{ fontWeight: 700 }}>New expense</span>
+              <span className="font-display font-700 text-lg" style={{ fontWeight: 700 }}>
+                {editingId ? "Edit expense" : "New expense"}
+              </span>
               <button
-                onClick={() => setShowForm(false)}
+                onClick={closeForm}
                 className="hover:scale-110 active:scale-90 transition-transform text-[var(--text-tertiary)]"
               >
                 <X size={18} />
@@ -2679,7 +2723,7 @@ function BudgetTab({ budget, addExpense, removeExpense }) {
               onClick={submit}
               className="w-full bg-[var(--primary-bg)] text-[var(--primary-text)] rounded-lg py-2.5 text-sm font-medium mt-1 hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
-              Add expense
+              {editingId ? "Save changes" : "Add expense"}
             </button>
           </div>
         </div>

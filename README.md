@@ -23,7 +23,10 @@ Vite + React + Tailwind app.
   ~16-day forecast horizon, cached for a few hours; otherwise falls back
   to the static seasonal estimate.
 - **Budget tracker** — log expenses by description, amount, currency,
-  category, and city; running totals per currency, plus a combined
+  category, and city; tap any expense to edit it in place (same form,
+  pre-filled, "Save changes" instead of "Add expense") — delete stays
+  a separate tap on the trash icon. Running totals per currency, plus
+  a combined
   "Total (≈ AUD)" card that converts every currency logged (AUD, EUR,
   HUF, CZK, USD) into one grand total using the same rates as the
   category breakdown below it. Tapping a category in that breakdown
