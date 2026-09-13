@@ -22,21 +22,24 @@ Vite + React + Tailwind app.
   Open-Meteo, free/no key) once that city's trip dates fall within the
   ~16-day forecast horizon, cached for a few hours; otherwise falls back
   to the static seasonal estimate.
-- **Budget tracker** — log expenses by description, amount, currency,
+- **Budget tracker** — "ADD EXPENSE" sits at the very top of the tab
+  for quick access. Log expenses by description, amount, currency,
   category, and city; tap any expense to edit it in place (same form,
   pre-filled, "Save changes" instead of "Add expense") — delete stays
   a separate tap on the trash icon. Running totals per currency, plus
-  a combined
-  "Total (≈ AUD)" card that converts every currency logged (AUD, EUR,
-  HUF, CZK, USD) into one grand total using the same rates as the
-  category breakdown below it. Tapping a category in that breakdown
+  a combined "Total (≈ AUD)" card that converts every currency logged
+  (AUD, EUR, HUF, CZK, USD) into one grand total using the same rates
+  as the category and city breakdowns below it. Tapping a category
   filters the expense list to just that category — tap it again (or
-  the "Showing: ___" chip) to clear the filter. "Export as PDF"
-  generates a real PDF client-side (jsPDF + jspdf-autotable) — totals,
-  category breakdown, full expense list — and downloads it directly.
-  Deliberately not `window.print()`: that has no browser chrome to
-  render a print dialog in, and silently does nothing, when the app
-  is installed as a standalone PWA (confirmed on iOS).
+  the "Showing: ___" chip) to clear the filter. A "By city (≈ AUD)"
+  bar chart (color-matched to each city's accent) sits right below
+  the category chart, built from the city already logged on each
+  expense. "Export as PDF" generates a real PDF client-side (jsPDF +
+  jspdf-autotable) — totals, category breakdown, full expense list —
+  and downloads it directly. Deliberately not `window.print()`: that
+  has no browser chrome to render a print dialog in, and silently does
+  nothing, when the app is installed as a standalone PWA (confirmed on
+  iOS).
 - **Currency converter** — convert between AUD/EUR/HUF/CZK/USD, plus a
   quick-reference table of common amounts converted to AUD. Fetches live
   rates from a CDN-hosted rate feed when online and caches the last known

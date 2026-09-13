@@ -2440,6 +2440,24 @@ function BudgetTab({ budget, addExpense, removeExpense, updateExpense }) {
     [categoryTotals]
   );
   const maxCategoryTotal = Math.max(0, ...Object.values(categoryTotals));
+
+  const cityTotals = useMemo(() => {
+    const rates = loadFromStorage(FX_STORAGE_KEY)?.rates || FX_FALLBACK_RATES;
+    const t = {};
+    budget.forEach((e) => {
+      if (!e.city) return;
+      const amt = parseFloat(e.amount) || 0;
+      const aud = e.currency === "AUD" ? amt : amt / (rates[e.currency] || 1);
+      t[e.city] = (t[e.city] || 0) + aud;
+    });
+    return t;
+  }, [budget]);
+
+  const sortedCityIds = useMemo(
+    () => CITIES.map((c) => c.id).filter((id) => cityTotals[id] > 0).sort((a, b) => cityTotals[b] - cityTotals[a]),
+    [cityTotals]
+  );
+  const maxCityTotal = Math.max(0, ...Object.values(cityTotals));
   const totalAUD = useMemo(
     () => Object.values(categoryTotals).reduce((sum, v) => sum + v, 0),
     [categoryTotals]
@@ -2519,6 +2537,18 @@ function BudgetTab({ budget, addExpense, removeExpense, updateExpense }) {
 
   return (
     <div>
+      <button
+        onClick={() => {
+          setForm({ description: "", amount: "", currency: "AUD", category: "Activities", city: "" });
+          setEditingId(null);
+          setShowForm(true);
+        }}
+        className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-4 text-base font-bold mb-5 shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-transform"
+        style={{ background: "linear-gradient(135deg, #E0703C, #C9463F)", boxShadow: "0 4px 14px rgba(224,112,60,0.5)" }}
+      >
+        <Plus size={20} strokeWidth={3} /> ADD EXPENSE
+      </button>
+
       {Object.keys(totals).length > 0 && (
         <div className="rounded-2xl p-4 mb-2.5 text-white" style={{ background: "var(--stamp)" }}>
           <div className="font-mono text-[11px] uppercase tracking-widest opacity-80">Total (≈ AUD)</div>
@@ -2592,23 +2622,39 @@ function BudgetTab({ budget, addExpense, removeExpense, updateExpense }) {
         </Section>
       )}
 
-      <button
-        onClick={() => setSmartOpen(true)}
-        className="w-full flex items-center justify-center gap-2 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl py-3 text-sm font-medium mb-2 hover:scale-[1.01] active:scale-[0.99] transition-transform"
-      >
-        <Sparkles size={16} /> Smart add — speak or scan a receipt
-      </button>
+      {sortedCityIds.length > 0 && (
+        <Section icon={<MapPin size={15} />} title="By city (≈ AUD)" accent="var(--text-primary)">
+          <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 space-y-3">
+            {sortedCityIds.map((cityId) => {
+              const city = CITIES.find((c) => c.id === cityId);
+              const amt = cityTotals[cityId];
+              const pct = maxCityTotal > 0 ? (amt / maxCityTotal) * 100 : 0;
+              return (
+                <div key={cityId}>
+                  <div className="flex items-baseline justify-between mb-1 gap-2">
+                    <span className="text-sm text-[var(--text-tertiary)]">{city?.name || cityId}</span>
+                    <span className="font-mono text-xs text-[var(--text-muted)] shrink-0">
+                      ≈${amt.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-[var(--border)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-500 ease-out"
+                      style={{ width: `${pct}%`, background: city?.accent || "var(--text-primary)" }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
 
       <button
-        onClick={() => {
-          setForm({ description: "", amount: "", currency: "AUD", category: "Activities", city: "" });
-          setEditingId(null);
-          setShowForm(true);
-        }}
-        className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-4 text-base font-bold mb-5 shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-transform"
-        style={{ background: "linear-gradient(135deg, #E0703C, #C9463F)", boxShadow: "0 4px 14px rgba(224,112,60,0.5)" }}
+        onClick={() => setSmartOpen(true)}
+        className="w-full flex items-center justify-center gap-2 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl py-3 text-sm font-medium mb-5 hover:scale-[1.01] active:scale-[0.99] transition-transform"
       >
-        <Plus size={20} strokeWidth={3} /> ADD EXPENSE
+        <Sparkles size={16} /> Smart add — speak or scan a receipt
       </button>
 
       {smartOpen && <SmartAddModal onClose={() => setSmartOpen(false)} onParsed={applyParsed} />}
