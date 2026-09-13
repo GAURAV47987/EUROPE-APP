@@ -884,6 +884,9 @@ export default function App() {
   const removeExpense = (id) => {
     setBudget((prev) => prev.filter((e) => e.id !== id));
   };
+  const updateExpense = (id, entry) => {
+    setBudget((prev) => prev.map((e) => (e.id === id ? { ...e, ...entry } : e)));
+  };
 
   const handleCreateTrip = async () => {
     setSyncStatus("syncing");
